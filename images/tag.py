@@ -23,8 +23,8 @@ def rest_get_tags():
 
 @api.get('/<id>')
 @auth_basic(authenticate)
-def rest_get_tags(id):
-    json = get_tagi_by_id().to_json()
+def rest_get_tag_by_id(id):
+    json = get_tag_by_id().to_json()
     logging.debug("Tag\n%s", json)
     return json
 
