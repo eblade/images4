@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+
+import sys, os, logging, json
+from argparse import ArgumentParser
+from bottle import Bottle, debug, template, static_file, request, redirect, HTTPError, auth_basic
+
+from images.database import init
+from images.user import authenticate, no_guests
+
+from images import scanner, location, entry, tag, user, import_job
+
+import images.image  # to load the metadata schema
+
+
+# Options
+parser = ArgumentParser(usage="images")
+parser.add_argument('root', default=os.getenv('IMAGES_ROOT', None),
+    help='specify a root folder for the application data')
+parser.add_argument('--location', '-l', default='drop_folder',
+    help='specify a location to import from (default drop_folder)')
+parser.add_argument('-g', '--debug', action="store_true",
+    help='show debug messages')
+
+
+args = parser.parse_args()
+FORMAT = '%(asctime)s [%(threadName)s] %(filename)s +%(levelno)s %(funcName)s %(levelname)s %(message)s'
+logging.basicConfig(level=(logging.DEBUG if args.debug else logging.INFO), format=FORMAT)
+data_root = args.root
+sql_path = "sqlite:///" + os.path.join(data_root, 'images4.db')
+
+
+# Setting up the database
+db = init(sql_path)
+
+
+# Setting up threads
+scanner_manager = scanner.ScannerManager()
+import_manager = import_job.ImportManager()
+
+
+# Mounting all APIs
+api = Bottle()
+api.mount(location.API, location.api)
+api.mount(scanner.API, scanner.api)
+api.mount(entry.API, entry.api)
+api.mount(tag.API, tag.api)
+api.mount(user.API, user.api)
+api.mount(import_job.API, import_job.api)
+
+
+@api.get('/')
+@auth_basic(authenticate)
+def get_index():
+    return static_file("index.html", root='public')
+
+
+@api.get('/<file>.html')
+def get_html(file):
+    return static_file(file + '.html', root='public/js')
+
+
+@api.get('/js/<file>.js')
+def get_js(file):
+    return static_file(file + '.js', root='public/js')
+
+
+@api.get('/css/<file>.css')
+def get_css(file):
+    return static_file(file + '.css', root='public/css')
+
+
+#@api.get('/css/images/<file>.png')
+#def get_css(file):
+#    return static_file(file + '.png', root='public/jquery-ui-images')
+
+
+
+debug(True)
+api.run(reloader=True, host='0.0.0.0')

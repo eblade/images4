@@ -1,0 +1,184 @@
+/* Bootstrap wants this */
+.nav, .pagination, .carousel, .panel-title a { cursor: pointer; }
+
+body {
+  background-color: #222;
+  color: #bbb;
+  font-family: arial;
+  margin-left: 0px;
+  margin-right: 0px;
+  margin-top: 45px;
+  margin-bottom: 0px;
+}
+a {
+  color: #ccc;
+  text-decoration: none;
+  font-weight: bold;
+}
+.entry {
+  width: 200px;
+  height: 200px;
+  margin: 5px;
+  float: left;
+  overflow: hidden;
+  background-color: #333;
+}
+#proxy_holder {
+  background-color: #555;
+  padding: 0px;
+}
+.proxy {
+  height: 500px;
+  margin-top: 5px;
+  margin-bottom: 3px;
+  margin-left: 6px;
+  margin-right: 5px;
+}
+#entry_holder {
+  background-color: #888;
+}
+.deleted {
+  filter: opacity(20%);
+}
+.hidden {
+  filter: blur(4px);
+}
+.selected {
+  border: 3px solid white;
+  width: 194px;
+  height: 194px;
+}
+#menu {
+  color: #999;
+  height: 32px;
+  width: 32px;
+  position: fixed;
+  left: 0px;
+  top: 0px;
+  z-index: 100;
+}
+.button {
+  width: 32px;
+  height: 32px;
+}
+.top {
+  position: absolute;
+  top: 40px;
+  left: 5px;
+}
+.spacer {
+  height: 45px;
+  width: 100%;
+}
+.title {
+  font-weight: bold;
+  font-size: 16px;
+  position: fixed;
+  top: 0px;
+  left: 0px;
+  padding-top: 5px;
+  padding-left: 5px;
+  width: 100%;
+  background-color: rgba(50, 50, 50, 0.50);
+}
+.viewtitle {
+  font-size: 30px;
+  position: fixed;
+  top: 0px;
+  left: 0px;
+  padding-left: 5px;
+}
+#grid {
+    margin-top: 100px;
+}
+.menu_thumb {
+    position: fixed;
+    top: 40px;
+    left: 10px;
+}
+.menu {
+    position: absolute;
+    top: 42px;
+    left: 5px;
+    width: 400px;
+}
+.tags {
+    position: absolute;
+    top: 49px;
+    left: 5px;
+    width: 300px;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, .5);
+}
+.metadata {
+    position: absolute;
+    top: 49px;
+    left: 5px;
+    width: 500px;
+    max-height: 480px;
+    overflow-y: scroll;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, .5);
+}
+.tag_no {
+    filter: opacity(20%);
+}
+.tag_yes {
+    filter: opacity(100%);
+}
+.tag {
+    padding: 2px;
+    text-transform: uppercase;
+    font-weight: bold;
+    margin: 0px;
+    float: left;
+    cursor: pointer;
+}
+.black {
+    background-color: black;
+    color: white;
+}
+.blue {
+    background-color: white;
+    color: blue;
+}
+.form {
+    position: absolute;
+    left: 10px;
+    top: 130px;
+}
+.created_collection {
+    position: absolute;
+    left: 10px;
+    top: 70px;
+    padding: 10px;
+    background-color: #385;
+    color: white:
+    font-weight: bold;
+}
+
+p {
+    margin: 5px;
+}
+
+input {
+    background-color: black;
+    color: #aaa;
+    border: 1px solid #555;
+}
+
+.warning {
+  font-weight: bold;
+  color: red;
+}
+.info {
+  color: lightblue;
+}
+.yes {
+  font-weight: bold;
+  color: blue;
+}
+.no {
+  font-weight: bold;
+  color: grey;
+}
