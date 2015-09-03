@@ -274,6 +274,7 @@ class ImportManager(object):
         rest_trig_import.manager = self
 
         for location in get_locations_by_type(Location.Type.drop_folder).entries:
+            logging.info("Setting up import thread importer_%s", location.id)
             event = Event()
             self.events[location.id] = (event, location)
             thread = Thread(

@@ -7,9 +7,7 @@ from bottle import Bottle, debug, template, static_file, request, redirect, HTTP
 from images.database import init
 from images.user import authenticate, no_guests
 
-from images import scanner, location, entry, tag, user, import_job
-
-import images.image  # to load the metadata schema
+from images import scanner, location, entry, tag, user, import_job, image
 
 
 # Options
@@ -76,4 +74,4 @@ def get_css(file):
 
 
 debug(True)
-api.run(reloader=True, host='0.0.0.0')
+api.run(host='0.0.0.0')
