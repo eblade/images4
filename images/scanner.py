@@ -4,7 +4,7 @@ import os, logging
 from threading import Thread, Event
 from bottle import Bottle, auth_basic
 
-from . import Location
+from . import api, Location
 from .database import get_db
 from .location import LocationDescriptor, get_locations_by_type
 from .import_job import ImportJobDescriptor, create_import_job
@@ -13,14 +13,15 @@ from .user import authenticate, no_guests
 
 
 ################################################################################
-# Scenner API
+# Scanner API
 
 
-API = '/scanner'
-api = Bottle()
+BASE = '/scanner'
+app = Bottle()
+api.register(BASE, app)
 
 
-@api.get('/')
+@app.get('/')
 @auth_basic(authenticate)
 @no_guests()
 def rest_get_scanners():
@@ -29,7 +30,7 @@ def rest_get_scanners():
         entries.append({
             'location_id': location.id,
             'location_name': location.name,
-            'trig_url': API + 'trig/%i' % location.id,
+            'trig_url': get_trig_url(location.id),
         })
 
     return {
@@ -39,13 +40,19 @@ def rest_get_scanners():
     }
         
     
-@api.get('/trig/<location_id:int>')
+@app.post('/trig/<location_id:int>')
 @auth_basic(authenticate)
 @no_guests()
 def rest_trig_scan(location_id):
     manager = rest_trig_scan.manager
     manager.trig(location_id)
     return {'result': 'ok'}
+
+
+def get_trig_url(location_id):
+    return '%s/trig/%s' % (BASE, location_id)
+
+api.url().scanner += get_trig_url
 
 
 ################################################################################
@@ -87,7 +94,7 @@ class ScannerManager(object):
         for location in get_locations_by_type(Location.Type.drop_folder).entries:
             logging.info("Setting up scanner thread scanner_%s", location.id)
             event = Event()
-            self.events[location.id] = (event, location)
+            self.events[location.id] = event
             thread = Thread(
                 target=scanning_loop,
                 name="scanner_%i" % (location.id),
@@ -97,9 +104,10 @@ class ScannerManager(object):
             thread.start()
 
     def trig(self, location_id):
-        event, _ = self.events.get(location_id, (None, None))
+        event = self.events.get(location_id)
         if event is None:
-            return
+            raise NameError("No thread for location %i", location_id)
+        logging.info("Trigging scanner event for location %i", location_id)
         event.set()
                 
 

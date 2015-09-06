@@ -22,7 +22,7 @@ class Database(object):
     def __init__(self, sql_path=None):
         Database.sql_path = sql_path or Database.sql_path
         assert Database.sql_path, "SQL Path must be given at some point"
-        logging.info("Creating new Database at %s.", Database.sql_path)
+        logging.info("Creating new Database Engine at %s.", Database.sql_path)
         self.local.in_transaction = False
         self.local.engine = create_engine(Database.sql_path)
         self.local.session_maker = sessionmaker()
@@ -95,6 +95,6 @@ def get_db():
     if hasattr(module_local, 'engine'):
         return module_local.engine
     else:
-        logging.info("Creating a new database client for thread")
+        logging.info("Creating a new Database Engine for thread %s", threading.current_thread().name)
         module_local.engine = Database()
         return module_local.engine

@@ -9,7 +9,7 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
     // Initialize
     $scope.tag_by_id = new Object();
     $scope.tag_feed = new Object();
-    $scope.feed = new Object();
+    $scope.feed = new Array();
 
     // Modes
     $scope.mode = null;
@@ -156,12 +156,12 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
 
     $scope.current_is_deleted = function() {
         var entry = $scope.get_current();
-        return entry.deleted;
+        return entry ? entry.deleted : false;
     }
 
     $scope.current_is_hidden = function() {
         var entry = $scope.get_current();
-        return entry.hidden;
+        return entry ? entry.hidden : false;
     }
 
     $scope.get_access = function(entry) {
@@ -219,18 +219,71 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
     };
 })
 
-;
-/*
-.directive('autoComplete', function($timeout) {
-    return function(scope, iElement, iAttr) {
-        iElement.autocomplete({
-            source: scope[iAttr.uiItems],
-            select: function() {
-                $timeout(function() {
-                    iElement.trigger('input');
-                }, 0);
-            }
+
+.controller('Manage', function ($scope, $http) {
+    // Modes
+    $scope.mode = null;
+    $scope.set_mode = function(mode) { $scope.mode = mode; };
+    $scope.no_mode = function() { return $scope.mode == null; };
+    $scope.location_mode = function() { return $scope.mode == 'location'; };
+    $scope.import_job_mode = function() { return $scope.mode == 'import_job'; };
+
+    // Load resources
+    $http.get('user/me')
+        .success(function(data) {
+            $scope.me = data;
         });
+
+    $scope.empty_post = function(url) {
+        $http.post(url)
+            .success(function(data) {
+                $scope.message = data.result;
+            });
     };
-});
-*/
+
+    $scope.bool2str = function(b) {
+        return b ? 'yes' : 'no';
+    }
+})
+
+.controller('Location', function ($scope, $http) {
+    // Initialize
+    $scope.location_feed = Array();
+    $scope.location_type = {
+        0: 'drop_folder',
+        1: 'image',
+        2: 'video',
+        3: 'audio',
+        4: 'other',
+        5: 'proxy',
+        6: 'thumb',
+        7: 'upload',
+        8: 'export',
+    };
+
+    // Load resources
+    $http.get('location')
+        .success(function(data) {
+            $scope.location_feed = data;
+        });
+})
+
+.controller('ImportJob', function ($scope, $http) {
+    // Initialize
+    $scope.import_job_feed = Array();
+    $scope.import_job_state = {
+        0: 'new',
+        1: 'active',
+        2: 'done',
+        3: 'failed',
+        4: 'hold',
+    };
+
+    // Load resources
+    $http.get('import/job')
+        .success(function(data) {
+            $scope.import_job_feed = data;
+        });
+})
+
+;

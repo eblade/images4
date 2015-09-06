@@ -1,26 +1,28 @@
 #!/usr/bin/env python3
 
-import sys, os, logging
+import sys, os, logging, configparser
 from argparse import ArgumentParser
 
 from images.database import init, password_hash
-from images import Location, User
+from images import Location, User, Tag
+
 
 # Options
 parser = ArgumentParser(usage="setup_images")
-parser.add_argument('root', default=os.getenv('IMAGES_ROOT', None),
-    help='specify a root folder for the application data')
+parser.add_argument('-c', '--config', default=os.getenv('IMAGES_CONFIG', 'images.ini'),
+    help='specify what config file to run on')
 parser.add_argument('-g', '--debug', action="store_true",
     help='show debug messages')
 
+
 args = parser.parse_args()
-
-
+config = configparser.ConfigParser()
+config.read(args.config)
 logging.basicConfig(level=(logging.DEBUG if args.debug else logging.INFO))
-data_root = args.root
-sql_path = "sqlite:///" + os.path.join(data_root, 'images4.db')
+sql_path = config['Database']['path']
 
-logging.info("Data Root: %s", data_root)
+
+logging.info("Config: %s", args.config)
 logging.info("SQL Path: %s", sql_path)
 
 
@@ -32,67 +34,81 @@ db.create_all()
 
 
 # Adding default users and groups
-logging.info("Setting up users and groups...")
+logging.info("Setting up users...")
 with db.transaction() as t:
-    if t.query(User).count() > 0:
-        logging.info("Users table is already populated, skipping.")
-    else:
-        user = User(name="user", fullname="User", password=password_hash('user'))
-        admin = User(name="admin", fullname="Admin", password=password_hash('admin'), user_class=User.Class.admin)
-        guest = User(name="guest", fullname="Guest", password=password_hash('guest'), user_class=User.Class.guest)
+    for username, data in config['User'].items():
+        logging.debug("There should be a user '%s'.", username)
+        
+        if t.query(User).filter(User.name==username).count() > 0:
+            logging.debug("User '%s' exists, skipping.", username)
+            continue
+
+        data = [d.strip() for d in data.split(',')]
+        assert len(data) == 3, "Userdata strings must be on format username = Fullname, Class, State"
+        fullname = data[0]
+        user_class = getattr(User.Class, data[1])
+        status = getattr(User.Status, data[2])
+
+        user_config = User.DefaultConfig()
+
+        user = User(
+            name=username,
+            fullname=fullname,
+            user_class=user_class,
+            status=status,
+            password=password_hash(username),
+            config=user_config.to_json(),
+        )
         t.add(user)
-        t.add(admin)
+        logging.info("Added user '%s'.", username)
+logging.info("Done with users.")
 
 
 # Adding locations
 logging.info("Setting up locations...")
 with db.transaction() as t:
-    if t.query(Location).count() > 0:
-        logging.info("Location table is already populated, skipping.")
-    else:
-        drop_folder = Location(
-            name="drop_folder",
-            type=Location.Type.drop_folder,
-            data=Location.DefaultLocationMetadata(
-                folder=os.path.join(data_root, 'drop_folder'),
-                auto_tag=True,
-                auto_user=True,
-                user_id=1,
-            ).to_json()
-        )
-        image = Location(
-            name="images",
-            type=Location.Type.image,
-            data=Location.DefaultLocationMetadata(
-                folder=os.path.join(data_root, 'image')
-            ).to_json()
-        )
-        video = Location(
-            name="video",
-            type=Location.Type.video,
-            data=Location.DefaultLocationMetadata(
-                folder=os.path.join(data_root, 'video')
-            ).to_json()
-        )
-        proxy = Location(
-            name="proxy",
-            type=Location.Type.proxy,
-            data=Location.DefaultLocationMetadata(
-                folder=os.path.join(data_root, 'proxy')
-            ).to_json()
-        )
-        thumb = Location(
-            name="thumb",
-            type=Location.Type.thumb,
-            data=Location.DefaultLocationMetadata(
-                folder=os.path.join(data_root, 'thumb')
-            ).to_json()
-        )
-        t.add(drop_folder)
-        t.add(image)
-        t.add(video)
-        t.add(proxy)
-        t.add(thumb)
+    for name, path in config['Location'].items():
+        logging.debug("There should be a location '%s'.", name)
 
+        if t.query(Location).filter(Location.name==name).count() > 0:
+            logging.debug("Location '%s' exists, skipping.", name)
+            continue
+
+        extra_name = 'Location:%s' % name
+        extra = config[extra_name] if extra_name in config.sections() else {}
+
+        metadata = data=Location.DefaultLocationMetadata(extra)
+        metadata.folder = path
+        type = extra.get('type', name)
+    
+        location = Location(
+            name=name,
+            type=getattr(Location.Type, type),
+            data=metadata.to_json(),
+        )
+        
+        t.add(location)
+        logging.info("Added location '%s'.", name)
+logging.info("Done with locations.")
+
+
+# Adding tags
+logging.info("Setting up tags...")
+with db.transaction() as t:
+    for name, color in config['Tag'].items():
+        logging.debug("There should be a tag '%s'.", name)
+
+        if t.query(Tag).filter(Tag.id==name).count() > 0:
+            logging.debug("Tag '%s' exists, skipping.", name)
+            continue
+
+        tag = Tag(
+            id=name,
+            color=int(color),
+        )
+        
+        t.add(tag)
+        logging.info("Added tag '%s'.", name)
+logging.info("Done with tags.")
 
 logging.info("Done.")

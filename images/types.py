@@ -1,13 +1,16 @@
 import json
+from .metadata import wrap_dict
 
 class Property(object):
-    def __init__(self, type=str, name=None, default=None, enum=None, required=False, validator=None):
+    def __init__(self, type=str, name=None, default=None, enum=None,
+                 required=False, validator=None, wrap=False):
         self.name = name
         self.type = enum if enum else type
         self.enum = enum
         self.required = required
         self.validator = validator
         self.default = default
+        self.wrap = wrap
     
     def __property_config__(self, model_class, property_name):
         self.model_class = model_class
@@ -32,6 +35,10 @@ class Property(object):
                 return self.default
     
     def __set__(self, model_instance, value):
+        if self.wrap and isinstance(value, dict):
+            value = wrap_dict(value)
+        if issubclass(self.type, PropertySet) and isinstance(value, dict):
+            value = self.type(value)
         if self.enum:
             value = self.enum(value)
         value = self.validate(value)
@@ -41,6 +48,14 @@ class Property(object):
         return value is not None
 
     def validate(self, value):
+        try:
+            if self.type is bool and value.lower() in ('yes', 'no', 'true', 'false', '1', '0'):
+                if value in ('yes', 'true', '1'):
+                    value = True
+                else:
+                    value = False
+        except AttributeError:
+            pass
         if self.required:
             if self.is_empty(value):
                 raise ValueError("Property %s is required" % self.name)

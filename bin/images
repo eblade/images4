@@ -1,33 +1,35 @@
 #!/usr/bin/env python3
 
-import sys, os, logging, json
+import sys, os, logging, json, configparser
 from argparse import ArgumentParser
 from bottle import Bottle, debug, template, static_file, request, redirect, HTTPError, auth_basic
-
-from images.database import init
-from images.user import authenticate, no_guests
-
-from images import scanner, location, entry, tag, user, import_job, image
 
 
 # Options
 parser = ArgumentParser(usage="images")
-parser.add_argument('root', default=os.getenv('IMAGES_ROOT', None),
-    help='specify a root folder for the application data')
-parser.add_argument('--location', '-l', default='drop_folder',
-    help='specify a location to import from (default drop_folder)')
+parser.add_argument('-c', '--config', default=os.getenv('IMAGES_CONFIG', 'images.ini'),
+    help='specify what config file to run on')
 parser.add_argument('-g', '--debug', action="store_true",
     help='show debug messages')
 
 
 args = parser.parse_args()
+config = configparser.ConfigParser()
+config.read(args.config)
 FORMAT = '%(asctime)s [%(threadName)s] %(filename)s +%(levelno)s %(funcName)s %(levelname)s %(message)s'
 logging.basicConfig(level=(logging.DEBUG if args.debug else logging.INFO), format=FORMAT)
-data_root = args.root
-sql_path = "sqlite:///" + os.path.join(data_root, 'images4.db')
+
+
+# Loading modules
+logging.info("Loading modules...")
+from images.database import init
+from images import api, scanner, location, entry, tag, user, import_job, image
+from images.user import authenticate, no_guests
+logging.info("Loading modules done.")
 
 
 # Setting up the database
+sql_path = config['Database']['path']
 db = init(sql_path)
 
 
@@ -37,41 +39,41 @@ import_manager = import_job.ImportManager()
 
 
 # Mounting all APIs
-api = Bottle()
-api.mount(location.API, location.api)
-api.mount(scanner.API, scanner.api)
-api.mount(entry.API, entry.api)
-api.mount(tag.API, tag.api)
-api.mount(user.API, user.api)
-api.mount(import_job.API, import_job.api)
+root_app = Bottle()
+api.mount_all(root_app)
 
 
-@api.get('/')
+@root_app.get('/')
 @auth_basic(authenticate)
 def get_index():
     return static_file("index.html", root='public')
 
+@root_app.get('/manage')
+@auth_basic(authenticate)
+@no_guests()
+def get_index():
+    return static_file("manage.html", root='public')
 
-@api.get('/<file>.html')
+@root_app.get('/<file>.html')
 def get_html(file):
     return static_file(file + '.html', root='public/js')
 
 
-@api.get('/js/<file>.js')
+@root_app.get('/js/<file>.js')
 def get_js(file):
     return static_file(file + '.js', root='public/js')
 
 
-@api.get('/css/<file>.css')
+@root_app.get('/css/<file>.css')
 def get_css(file):
     return static_file(file + '.css', root='public/css')
 
 
-#@api.get('/css/images/<file>.png')
+#@root_app.get('/css/images/<file>.png')
 #def get_css(file):
 #    return static_file(file + '.png', root='public/jquery-ui-images')
 
 
 
 debug(True)
-api.run(host='0.0.0.0')
+root_app.run(host='0.0.0.0')

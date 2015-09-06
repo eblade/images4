@@ -42,7 +42,7 @@ class JPEGImportModule(GenericImportModule):
 
     def copy_original(self):
         filecopy = FileCopy(self.job_descriptor.location, self.job_descriptor.path, 
-                            self.image_location, self.job_descriptor.filename, link=True)
+                            self.image_location, self.job_descriptor.safe_filename, link=True)
         filecopy.run()
         self.image_path = filecopy.destination_full_path
         self.image_rel_path = filecopy.destination_rel_path
@@ -62,7 +62,7 @@ class JPEGImportModule(GenericImportModule):
         )
         if not self.image_rel_path.startswith(better_folder):
             filecopy = FileCopy(None, self.image_path,
-                                self.image_location, self.job_descriptor.filename,
+                                self.image_location, self.job_descriptor.safe_filename,
                                 link=True, keep_original=False, dest_folder=better_folder)
             filecopy.run()
             self.image_path = filecopy.destination_full_path

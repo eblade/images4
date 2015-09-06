@@ -4,11 +4,12 @@ from bottle import Bottle, auth_basic, request, HTTPError
 from enum import IntEnum, unique
 from .types import PropertySet, Property, strip
 from .database import get_db, password_hash
-from . import User
+from . import api, User
 
 
-API = '/user/'
-api = Bottle()
+BASE = '/user'
+app = Bottle()
+api.register(BASE, app)
 
 
 def authenticate(username, password):
@@ -34,7 +35,7 @@ def authenticate(username, password):
             return False
 
 
-@api.get('/me')
+@app.get('/me')
 @auth_basic(authenticate)
 def me():
     json = request.user.to_json()

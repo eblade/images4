@@ -21,8 +21,12 @@ class Location(Base):
         drop_folder = 0
         image = 1
         video = 2 
-        proxy = 3
-        thumb = 4
+        audio = 3
+        other = 4
+        proxy = 5
+        thumb = 6
+        upload = 7
+        export = 8
 
     class DefaultLocationMetadata(PropertySet):
         server = Property()
@@ -31,6 +35,7 @@ class Location(Base):
         auto_tag = Property(bool, default=False)
         auto_user = Property(bool, default=False)
         user_id = Property()
+        keep_original = Property(bool, default=False)
 
     id = Column(Integer, primary_key=True)
     type = Column(Integer, nullable=False)
@@ -50,12 +55,16 @@ class User(Base):
         admin = 1
         guest = 2
 
+    class DefaultConfig(PropertySet):
+        pass
+
     id = Column(Integer, primary_key=True)
     status = Column(Integer, nullable=False, default=Status.enabled)
     name = Column(String(128), nullable=False)
     fullname = Column(String(128), nullable=False)
     password = Column(String(128), nullable=False)
     user_class = Column(Integer, nullable=False, default=Class.normal)
+    config = Column(String(16332))
 
 
 class ImportJob(Base):
@@ -66,11 +75,15 @@ class ImportJob(Base):
         active = 1
         done = 2 
         failed = 3
+        hold = 4
 
     class DefaultImportJobMetadata(PropertySet):
-        tags = Property(type=list)
+        tags = Property(list)
         metadata = Property() # just a string, don't open it
         error = Property()
+        hidden = Property(bool, default=False)
+        access = Property(int, default=0)  # Private
+        delete_ts = Property()
 
     id = Column(Integer, primary_key=True)
     create_ts = Column(DateTime(timezone=True), default=func.now())
@@ -115,10 +128,10 @@ class Entry(Base):
     export_filename = Column(String(256))
     state = Column(Integer, nullable=False, default=State.new)
     hidden = Column(Boolean, nullable=False, default=False)
-    deleted = Column(Boolean, nullable=False, default=False)
+    delete_ts = Column(DateTime(timezone=True))
     access = Column(Integer, nullable=False, default=Access.private)
     create_ts = Column(DateTime(timezone=True), default=func.now())
-    update_ts = Column(DateTime(timezone=True), onupdate=func.now())
+    update_ts = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
     taken_ts = Column(DateTime(timezone=True), default=func.now())
     latitude = Column(Float)
     longitude = Column(Float)
@@ -146,3 +159,4 @@ register_metadata_schema(Location.DefaultLocationMetadata)
 register_metadata_schema(ImportJob.DefaultImportJobMetadata)
 register_metadata_schema(Entry.DefaultMetadata)
 register_metadata_schema(Entry.DefaultPhysicalMetadata)
+register_metadata_schema(User.DefaultConfig)

@@ -2,18 +2,20 @@
 import random, logging
 
 from bottle import Bottle, auth_basic, request
+from sqlalchemy.orm.exc import NoResultFound
 
-from . import Tag
+from . import api, Tag
 from .database import get_db
 from .types import PropertySet, Property
 from .user import authenticate, no_guests
 
 
-API = '/tag'
-api = Bottle()
+BASE = '/tag'
+app = Bottle()
+api.register(BASE, app)
 
 
-@api.get('/')
+@app.get('/')
 @auth_basic(authenticate)
 def rest_get_tags():
     json = get_tags().to_json()
@@ -21,7 +23,7 @@ def rest_get_tags():
     return json
 
 
-@api.get('/<id>')
+@app.get('/<id>')
 @auth_basic(authenticate)
 def rest_get_tag_by_id(id):
     json = get_tag_by_id().to_json()
@@ -29,7 +31,7 @@ def rest_get_tag_by_id(id):
     return json
 
 
-@api.post('/')
+@app.post('/')
 @auth_basic(authenticate)
 @no_guests()
 def rest_add_tag():
@@ -241,3 +243,17 @@ def add_tag(td):
         id = tag.id
 
     return get_tag_by_id(id)
+
+
+def ensure_tag(tag_id):
+    """
+    Check if a tag with id `tag_id` exists. If not, create it.
+    """
+    with get_db().transaction() as t:
+        try:
+            t.query(Tag).filter(Tag.id == tag_id).one()
+        except NoResultFound:
+            tag = Tag()
+            tag.id = tag_id
+            tag.color = random.randrange(0, len(colors))
+            t.add(tag)

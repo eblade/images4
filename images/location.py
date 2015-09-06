@@ -1,28 +1,32 @@
 
 import logging, datetime, os
+
+from . import api, Location
 from bottle import Bottle, auth_basic, static_file
 from .types import PropertySet, Property
 from .user import authenticate
-from . import Location
 from .database import get_db
 from .metadata import wrap_raw_json
 
 
 ################################################################################
-# Location API
+# Location BASE
 
 
-API = '/location'
-api = Bottle()
+BASE = '/location'
+app = Bottle()
+api.register(BASE, app)
 
 
-@api.get('/')
+@app.get('/')
 @auth_basic(authenticate)
 def rest_get_locations():
-    return get_locations().to_json()
+    json = get_locations().to_json()
+    logging.info("Import Job feed\n%s", json)
+    return json
 
 
-@api.get('/<location_id>/dl/<path:path>')
+@app.get('/<location_id>/dl/<path:path>')
 @auth_basic(authenticate)
 def rest_download(location_id, path):
     location = get_location_by_id(location_id)
@@ -33,7 +37,9 @@ def get_download_url(location_id, path):
     """
     Return a physical download url for a file on a location.
     """
-    return "%s/%i/dl/%s" % (API, location_id, path)
+    return "%s/%i/dl/%s" % (BASE, location_id, path)
+
+api.url().location += get_download_url
 
 
 ################################################################################
@@ -45,7 +51,10 @@ class LocationDescriptor(PropertySet):
     type = Property(enum=Location.Type)
     id = Property()
     name = Property()
-    metadata = Property(type=Location.DefaultLocationMetadata)
+    metadata = Property(wrap=True)
+
+    trig_scan_url = Property()
+    trig_import_url = Property()
 
     def __repr__(self):
         if self.id:
@@ -63,14 +72,23 @@ class LocationDescriptor(PropertySet):
     def get_root(self):
         return self.metadata.folder
 
+    def calculate_urls(self):
+        self.self_url = '%s/%i' % (BASE, self.id)
+        if self.type is Location.Type.drop_folder:
+            self.trig_scan_url = api.url().scanner.get_trig_url(self.id)
+        if self.type in (Location.Type.drop_folder, Location.Type.upload):
+            self.trig_import_url = api.url().import_job.get_trig_url(self.id)
+
     @classmethod
     def map_in(self, location):
-        return LocationDescriptor( 
+        ld = LocationDescriptor( 
             id=location.id,
             type=Location.Type(location.type),
             name=location.name,
             metadata=wrap_raw_json(location.data),
         )
+        ld.calculate_urls()
+        return ld
 
 
 class LocationDescriptorFeed(PropertySet):
@@ -88,9 +106,9 @@ def get_location_by_id(id):
         return LocationDescriptor.map_in(location)
 
 
-def get_locations_by_type(type):
+def get_locations_by_type(*types):
     with get_db().transaction() as t:
-        locations = t.query(Location).filter(Location.type==type).all()
+        locations = t.query(Location).filter(Location.type.in_(types)).all()
         return LocationDescriptorFeed(
             count=len(locations),
             entries=[LocationDescriptor.map_in(location) for location in locations]

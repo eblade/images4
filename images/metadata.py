@@ -17,9 +17,15 @@ def get_metadata_schema(schema):
 def wrap_raw_json(json_string):
     if json_string is None:
         return None
-    data = json.loads(json_string)
-    schema = data.get('*schema')
+    d = json.loads(json_string)
+    return wrap_dict(d)
+
+
+def wrap_dict(d):
+    if d is None:
+        return None
+    schema = d.get('*schema')
     metadata_class = get_metadata_schema(schema)
     if metadata_class is None:
         raise NameError("No such metadata schema '%s'" % schema)
-    return metadata_class(data)
+    return metadata_class(d)
