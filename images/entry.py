@@ -17,7 +17,7 @@ DELETE_AFTER = 24  # hours
 
 
 ################################################################################
-# Entry BASE
+# Entry API
 
 BASE = '/entry'
 app = Bottle()
