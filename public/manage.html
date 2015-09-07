@@ -1,0 +1,85 @@
+<!doctype html>
+<html ng-app='images'>
+    <head>
+        <title>Manage Images4</title>
+        <link rel="stylesheet" type="text/css" href="css/index.css"/>
+        <script src="js/jquery.min.js"></script>
+        <script src="js/angular.min.js"></script>
+        <script src="js/angular-hotkeys.min.js"></script>
+        <script src="js/angular-touch.min.js"></script>
+        <script src="js/images.js"></script>
+    </head>
+    <body>
+        <div ng-controller="Manage" ng-init="mode = 'location'">
+            <div class="title">
+                <button ng-click="set_mode('location')" />Locations</button>
+                <button ng-click="set_mode('import_job')" />Import Jobs</button>
+                {{me.name}}/{{me.id}} :: {{message}}
+            </div>
+            <div ng-controller="Location" class="manage" ng-if="location_mode()">
+                <table>
+                    <tr>
+                        <th>Id</th>
+                        <th>Name</th>
+                        <th>Folder</th>
+                        <th>Type</th>
+                        <th class="number">User Id</th>
+                        <th>Keep Original</th>
+                        <th>Auto Tag</th>
+                        <th>Auto User</th>
+                        <th>Scan</th>
+                        <th>Import</th>
+                    </tr>
+                    <tr ng-repeat="location in location_feed.entries">
+                        <td>{{location.id}}</td>
+                        <td>{{location.name}}</td>
+                        <td>{{location.metadata.folder}}</td>
+                        <td>{{location_type[location.type]}}</td>
+                        <td class="number">{{location.metadata.user_id}}</td>
+                        <td class="{{bool2str(location.metadata.keep_original)}}">{{bool2str(location.metadata.keep_original)}}</td>
+                        <td class="{{bool2str(location.metadata.auto_tag)}}">{{bool2str(location.metadata.auto_tag)}}</td>
+                        <td class="{{bool2str(location.metadata.auto_user)}}">{{bool2str(location.metadata.auto_user)}}</td>
+                        <td><button 
+                                ng-show="location.trig_scan_url"
+                                ng-click="empty_post(location.trig_scan_url)">Scan now</button>
+                        </td>
+                        <td><button 
+                                ng-show="location.trig_import_url"
+                                ng-click="empty_post(location.trig_import_url)">Import now</button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div ng-controller="ImportJob" class="manage" ng-if="import_job_mode()">
+                <table>
+                    <tr>
+                        <th>Id</th>
+                        <th>Location</th>
+                        <th>Path</th>
+                        <th>User Id</th>
+                        <th>State</th>
+                        <th>Created</th>
+                        <th>Updated</th>
+                        <th>Message</th>
+                        <th>Reset</th>
+                    </tr>
+                    <tr ng-repeat="import_job in import_job_feed.entries">
+                        <td>{{import_job.id}}</td>
+                        <td>{{import_job.location.id}}</td>
+                        <td>{{import_job.path}}</td>
+                        <td>{{import_job.user_id}}</td>
+                        <td class="{{import_job_state[import_job.state]}}">{{import_job_state[import_job.state]}}</td>
+                        <td>{{import_job.create_ts}}</td>
+                        <td>{{import_job.update_ts}}</td>
+                        <td>{{import_job.metadata.error}}</td>
+                        <td><button 
+                                ng-show="import_job.trig_reset_url"
+                                ng-click="empty_post(import_job.trig_reset_url)">Reset</button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </body>
+</html>
+

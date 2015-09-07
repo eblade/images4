@@ -91,7 +91,7 @@ def no_guests():
 
         @functools.wraps(func)
         def wrapper(*a, **ka):
-            if request.user.user_class == User.Class.guest:
+            if request.user.user_class is User.Class.guest:
                 err = HTTPError(401, "Guests not allowed")
                 return err
             return func(*a, **ka)
@@ -99,6 +99,10 @@ def no_guests():
         return wrapper
 
     return decorator
+
+
+def current_is_user():
+    return request.user.user_class is not User.Class.guest 
 
 
 def require_user_id(user_id):

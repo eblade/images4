@@ -8,7 +8,7 @@ from . import Entry, api
 from .database import get_db
 from .types import PropertySet, Property
 from .location import LocationDescriptor, get_download_url
-from .user import require_user_id, current_user_id, authenticate, no_guests
+from .user import require_user_id, current_user_id, authenticate, no_guests, current_is_user
 from .metadata import wrap_raw_json
 from .tag import ensure_tag
 
@@ -27,7 +27,8 @@ api.register(BASE, app)
 @app.get('/')
 @auth_basic(authenticate)
 def rest_get_entries():
-    json = get_entries().to_json()
+    query = EntryQuery.map_in_from_request()
+    json = get_entries(query=query).to_json()
     logging.debug("Entry feed\n%s", json)
     return json
 
@@ -182,19 +183,78 @@ class EntryDescriptorFeed(PropertySet):
     entries = Property(list)
 
 
+class EntryQuery(PropertySet):
+    start_ts = Property()
+    end_ts = Property()
+    show_hidden = Property(bool, default=False)
+    only_hidden = Property(bool, default=False)
+    show_deleted = Property(bool, default=False)
+    only_deleted = Property(bool, default=False)
+    include_tags = Property(list)
+    exclude_tags = Property(list)
+
+    @classmethod
+    def map_in_from_request(self):
+        eq = EntryQuery()
+
+        eq.start_ts = request.query.start_ts
+        eq.end_ts = request.query.end_ts
+
+        eq.show_hidden = request.query.show_hidden == 'yes'
+        eq.show_deleted = request.query.show_deleted == 'yes'
+        eq.only_hidden = request.query.only_hidden == 'yes'
+        eq.only_deleted = request.query.only_deleted == 'yes'
+
+        eq.include_tags = [t.strip() for t in (request.query.include_tags or '').split(',') if t.strip()]
+        eq.exclude_tags = [t.strip() for t in (request.query.exclude_tags or '').split(',') if t.strip()]
+        return eq
+
 ################################################################################
 # Entry Internal BASE
 
 
-def get_entries():
+def get_entries(query=None):
     with get_db().transaction() as t:
         q = (t.query(Entry)
-              .filter((Entry.user_id == current_user_id()) | (Entry.access >= Entry.Access.common))
+              .filter((Entry.user_id == current_user_id()) | (Entry.access >= Entry.Access.public))
               .order_by(Entry.taken_ts.desc(), Entry.create_ts.desc())
-              .limit(100))
+        )
 
-        logging.debug(q)
-        entries = q.all()
+        if not current_is_user():
+            q = q.filter(Entry.access >= Entry.Access.users)
+
+        if query is not None:
+            logging.info("Query: %s", query.to_json())
+            
+            if query.start_ts:
+                start_ts = (datetime.datetime.strptime(
+                    query.start_ts, '%Y-%m-%d')
+                    .replace(hour=0, minute=0, second=0, microsecond=0))
+                q = q.filter(Entry.taken_ts >= start_ts)
+
+            if query.end_ts:
+                end_ts = (datetime.datetime.strptime(
+                    query.end_ts, '%Y-%m-%d')
+                    .replace(hour=0, minute=0, second=0, microsecond=0))
+                q = q.filter(Entry.taken_ts < end_ts)
+
+            if not query.show_hidden:
+                q = q.filter(Entry.hidden == False)
+            if not query.show_deleted:
+                q = q.filter(Entry.delete_ts == None)
+            if query.only_hidden:
+                q = q.filter(Entry.hidden == True)
+            if query.only_deleted:
+                q = q.filter(Entry.delete_ts != None)
+
+            for tag in query.include_tags:
+                q = q.filter(Entry.tags.like('%' + tag + '%'))
+               
+            for tag in query.exclude_tags:
+                q = q.filter(~Entry.tags.like('%' + tag + '%'))
+
+        logging.info(q)
+        entries = q.limit(100).all()
 
         result = EntryDescriptorFeed(count=len(entries))
         result.entries = [EntryDescriptor.map_in(entry) for entry in entries]

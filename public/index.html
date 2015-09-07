@@ -17,10 +17,78 @@
     <body>
         <div ng-controller="Entry" ng-init="current = -1">
             <div class="title">
+                <button ng-click="set_mode('query')" />Query</button>
                 <button ng-click="set_mode('tags')" />Tags</button>
                 <button ng-click="set_mode('metadata')" />Metadata</button>
                 <button ng-click="set_mode('physical')" />Physical</button>
-                {{me.name}}/{{me.id}} :: {{message}}
+                {{me.id}}/{{me.name}} :: {{current}}/{{feed.count}} :: {{message}}
+            </div>
+            <div class="query" ng-show="query_mode()">
+                <div class="query_part">
+                    After 
+                    <input
+                        type="text"
+                        ng-model="q_start_ts"
+                        ng-blur="enable_hk()"
+                        ng-focus="disable_hk()"/>
+                </div>
+                <div class="query_part">
+                    Before 
+                    <input
+                        type="text"
+                        ng-model="q_end_ts"
+                        ng-blur="enable_hk()"
+                        ng-focus="disable_hk()"/>
+                </div>
+                <div class="query_part">
+                    Have these tags
+                    <div class="tag for_query  tag_{{list_have(tag.id, q_include_tags)}}"
+                         style="background-color: {{tag.background_color}}; color: {{tag.foreground_color}};"
+                         ng-repeat="tag in tag_feed.entries" 
+                         ng-click="list_toggle(tag.id, q_include_tags)">
+                        {{tag.id}}
+                    </div>
+                </div>
+                <div class="query_part">
+                    Don not have these tags
+                    <div class="tag for_query tag_{{list_have(tag.id, q_exclude_tags)}}"
+                         style="background-color: {{tag.background_color}}; color: {{tag.foreground_color}};"
+                         ng-repeat="tag in tag_feed.entries" 
+                         ng-click="list_toggle(tag.id, q_exclude_tags)">
+                        {{tag.id}}
+                    </div>
+                </div>
+                <div class="query_part">
+                    <input
+                        type="checkbox"
+                        ng-model="q_show_hidden"
+                        ng-true-value="'yes'"
+                        ng-false-value="'no'"/>Show hidden entries
+                </div>
+                <div class="query_part">
+                    <input
+                        type="checkbox"
+                        ng-model="q_only_hidden"
+                        ng-true-value="'yes'"
+                        ng-false-value="'no'"/>Show only hidden entries
+                </div>
+                <div class="query_part">
+                    <input
+                        type="checkbox"
+                        ng-model="q_show_deleted"
+                        ng-true-value="'yes'"
+                        ng-false-value="'no'"/>Show deleted entries
+                </div>
+                <div class="query_part">
+                    <input
+                        type="checkbox"
+                        ng-model="q_only_deleted"
+                        ng-true-value="'yes'"
+                        ng-false-value="'no'"/>Show only deleted entries
+                </div>
+                <div class="query_part">
+                    <button ng-click="reload()" />Go</button>
+                </div>
             </div>
             <div class="tags" ng-show="tags_mode()">
                 <div class="tag tag_{{have_tag(tag.id)}}"
@@ -29,7 +97,12 @@
                      ng-click="toggle_tag(tag.id)">
                     {{tag.id}}
                 </div>
-                <input style="width: 100%" ng-model="new_tag_id" ng-keypress="add_tag($event)"/>
+                <input
+                    style="width: 100%"
+                    ng-model="new_tag_id"
+                    ng-keypress="add_tag($event)"
+                    ng-blur="enable_hk()"
+                    ng-focus="disable_hk()"/>
             </div>
             <div class="metadata" ng-show="metadata_mode()">
             </div>
@@ -44,7 +117,6 @@
             </div>
             <div
                 id="proxy_holder"
-                ng-if="have_current()"
                 ng-swipe-left="next()"
                 ng-swipe-right="previous()">
                 <center>
@@ -54,6 +126,29 @@
                 </center>
             </div>
             <div id="entry_holder">
+                <table>
+                    <tr>
+                        <td 
+                            class="thumbcell"
+                            ng-repeat="entry in feed.entries"
+                            scroll-if="$index == current">
+                            <img 
+                                ng-src="{{entry.thumb_url}}"
+                                ng-click="view($index)"
+                                class="thumb {{get_filters($index, entry)}}" />
+                            <div class="tag blue">{{entry.taken_ts}}</div>
+                            <div class="tag black">{{get_access(entry)}}{{entry.user_id}}</div>
+                            <div
+                                class="tag"
+                                style="background-color: {{tag_background_color(tag)}}; color: {{tag_foreground_color(tag)}};"
+                                ng-repeat="tag in entry.tags">
+                                {{tag}}
+                            </div>
+                        </td>
+                    </tr>
+                <table>
+            </div>
+            <!--<div id="entry_holder">
                 <div 
                     class="entry {{get_filters($index, entry)}}"
                     style="background-image: url({{entry.thumb_url}})"
@@ -68,7 +163,7 @@
                         {{tag}}
                     </div>
                 </div>
-            </div>
+            </div>-->
         </div>
     </body>
 </html>

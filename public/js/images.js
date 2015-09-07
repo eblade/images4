@@ -10,18 +10,45 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
     $scope.tag_by_id = new Object();
     $scope.tag_feed = new Object();
     $scope.feed = new Array();
+    
+    $scope.q_start_ts = '2000-01-01';
+    $scope.q_end_ts = '';
+    $scope.q_show_hidden = 'no';
+    $scope.q_only_hidden = 'no';
+    $scope.q_show_deleted = 'no';
+    $scope.q_only_deleted = 'no';
+    $scope.q_include_tags = Array();
+    $scope.q_exclude_tags = Array();
+
+    $scope.hk = true;
 
     // Modes
     $scope.mode = null;
     $scope.set_mode = function(mode) { $scope.mode = mode; };
     $scope.no_mode = function() { return $scope.mode == null; };
+    $scope.query_mode = function() { return $scope.mode == 'query'; };
     $scope.tags_mode = function() { return $scope.mode == 'tags'; };
     $scope.metadata_mode = function() { return $scope.mode == 'metadata'; };
     $scope.physical_mode = function() { return $scope.mode == 'physical'; };
-    $hotkey.bind('N', function(event) { event.preventDefault(); $scope.set_mode(null); });
-    $hotkey.bind('T', function(event) { event.preventDefault(); $scope.set_mode('tags'); });
-    $hotkey.bind('M', function(event) { event.preventDefault(); $scope.set_mode('metadata'); });
-    $hotkey.bind('P', function(event) { event.preventDefault(); $scope.set_mode('physical'); });
+
+    $hotkey.bind('N', function(event) { if ($scope.hk) {
+        event.preventDefault(); $scope.set_mode(null); }; });
+    $hotkey.bind('Q', function(event) { if ($scope.hk) {
+        event.preventDefault(); $scope.set_mode('query'); }; });
+    $hotkey.bind('T', function(event) { if ($scope.hk) {
+        event.preventDefault(); $scope.set_mode('tags'); }; });
+    $hotkey.bind('M', function(event) { if ($scope.hk) {
+        event.preventDefault(); $scope.set_mode('metadata'); }; });
+    $hotkey.bind('P', function(event) { if ($scope.hk) {
+        event.preventDefault(); $scope.set_mode('physical'); }; });
+
+    $scope.enable_hk = function() {
+        $scope.hk = true;
+    };
+
+    $scope.disable_hk = function() {
+        $scope.hk = false;
+    };
 
     // Load resources
     $http.get('tag')
@@ -39,11 +66,6 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
         });
 
 
-    $http.get('entry')
-        .success(function(data) {
-            $scope.feed = data;
-        });
-
     // Entry API
     $scope.update_entry = function(entry) {
         $http.put(entry.self_url, entry)
@@ -51,6 +73,26 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
                 $scope.message = "Entry updated";
             });
     };
+
+    $scope.reload = function() {
+        $http.get('entry', {
+            params: {
+                start_ts: $scope.q_start_ts,
+                end_ts: $scope.q_end_ts,
+                show_hidden: $scope.q_show_hidden,
+                only_hidden: $scope.q_only_hidden,
+                show_deleted: $scope.q_show_deleted,
+                only_deleted: $scope.q_only_deleted,
+                include_tags: $scope.q_include_tags.join(),
+                exclude_tags: $scope.q_exclude_tags.join(),
+            }
+        })
+            .success(function(data) {
+                $scope.feed = data;
+            });
+    };
+
+    $scope.reload();
 
     // Tags API
     $scope.add_tag = function(event) {
@@ -75,22 +117,29 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
     $scope.previous = function() {
         $scope.current = Math.max(0, $scope.current - 1);
     };
-    $hotkey.bind('Left', function(event) { event.preventDefault(); $scope.previous(); });
+    $hotkey.bind('Left', function(event) { if ($scope.hk) {
+        event.preventDefault(); $scope.previous(); }; });
 
     $scope.next = function() {
         $scope.current = Math.min($scope.feed.count - 1, $scope.current + 1);
     };
-    $hotkey.bind('Right', function(event) { event.preventDefault(); $scope.next(); });
+    $hotkey.bind('Right', function(event) { if ($scope.hk) {
+        event.preventDefault(); $scope.next(); }; });
 
     $scope.home = function() {
         $scope.current = 0;
     };
-    $hotkey.bind('Ctrl+Left', function(event) { event.preventDefault(); $scope.home(); });
+    $hotkey.bind('Ctrl+Left', function(event) { if ($scope.hk) {
+        event.preventDefault(); $scope.home(); }; });
 
     $scope.end = function() {
         $scope.current = $scope.feed.count - 1;
     };
-    $hotkey.bind('Ctrl+Right', function(event) { event.preventDefault(); $scope.end(); });
+    $hotkey.bind('Ctrl+Right', function(event) { if ($scope.hk) {
+        event.preventDefault(); $scope.end(); }; });
+
+    $hotkey.bind('Enter', function(event) { if ($scope.query_mode()) {
+        event.preventDefault(); $scope.reload(); }; });
 
     // Toggling Delete
     $scope.toggle_deleted = function() {
@@ -98,7 +147,8 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
         entry.deleted = ! entry.deleted;
         $scope.update_entry(entry);
     };
-    $hotkey.bind('Delete', function(event) { event.preventDefault(); $scope.toggle_deleted(); });
+    $hotkey.bind('Delete', function(event) { if ($scope.hk) {
+        event.preventDefault(); $scope.toggle_deleted(); }; });
 
     // Toggling Hidden
     $scope.toggle_hidden = function() {
@@ -106,7 +156,8 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
         entry.hidden = ! entry.hidden;
         $scope.update_entry(entry);
     };
-    $hotkey.bind('X', function(event) { event.preventDefault(); $scope.toggle_hidden(); });
+    $hotkey.bind('X', function(event) { if ($scope.hk) {
+        event.preventDefault(); $scope.toggle_hidden(); }; });
 
     // Info About Current
     $scope.have_current = function() {
@@ -177,28 +228,34 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
     };
 
     // Tags functions
-    $scope.have_tag = function(tag_id) {
-        var entry, a;
-        entry = $scope.get_current();
-        if (entry == null) { return "no"; }
-        a = entry.tags.indexOf(tag_id);
+    $scope.list_have = function(string, list) {
+        var a = list.indexOf(string);
         if (a === -1) { return "no"; }
         else { return "yes"; }
     };
 
+    $scope.list_toggle = function(string, list) {
+        var a = list.indexOf(string);
+        if (a === -1) {
+            list.push(string);
+        } else {
+            list.splice(a);
+        }
+    };
+
+    $scope.have_tag = function(tag_id) {
+        var entry;
+        entry = $scope.get_current();
+        if (entry == null) { return "no"; }
+        return $scope.list_have(tag_id, entry.tags);
+    };
+
     $scope.toggle_tag = function(tag_id) {
-        var 
-            entry = $scope.feed.entries[$scope.current],
-            a;
+        var entry = $scope.feed.entries[$scope.current];
         if (entry == null) {
             return;
         }
-        a = entry.tags.indexOf(tag_id);
-        if (a === -1) {
-            entry.tags.push(tag_id);
-        } else {
-            entry.tags.splice(a);
-        }
+        $scope.list_toggle(tag_id, entry.tags);
         $scope.update_entry(entry);
     };
 
@@ -284,6 +341,36 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
         .success(function(data) {
             $scope.import_job_feed = data;
         });
+})
+
+.directive('scrollIf', function () {
+    var getScrollingParent = function(element) {
+        element = element.parentElement;
+        while (element) {
+            if (element.scrollWidth !== element.clientWidth) {
+                return element;
+            }
+            element = element.parentElement;
+        }
+        return null;
+    };
+    return function (scope, element, attrs) {
+        scope.$watch(attrs.scrollIf, function(value) {
+            if (value) {
+                var sp = getScrollingParent(element[0]);
+                var leftMargin = parseInt(attrs.scrollMarginLeft) || 0;
+                var rightMargin = parseInt(attrs.scrollMarginRight) || 0;
+                var elemOffset = element[0].offsetLeft;
+                var elemWidth = element[0].clientWidth;
+
+                if (elemOffset - leftMargin < sp.scrollLeft) {
+                    sp.scrollLeft = elemOffset - leftMargin;
+                } else if (elemOffset + elemWidth + rightMargin > sp.scrollLeft + sp.clientWidth) {
+                    sp.scrollLeft = elemOffset + elemWidth + rightMargin - sp.clientWidth;
+                }
+            }
+        });
+    }
 })
 
 ;

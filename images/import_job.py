@@ -150,7 +150,7 @@ class ImportJobDescriptor(PropertySet):
 
     @property
     def safe_filename(self):
-        return re_clean('_', os.path.basename(self.path))
+        return re_clean.sub('_', os.path.basename(self.path))
 
     def analyse(self):
         self.mime_type = mimetypes.guess_type(self.full_path)[0]
