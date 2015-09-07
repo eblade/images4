@@ -250,6 +250,10 @@ class FileCopy(object):
                 if e.errno == errno.EXDEV:
                     logging.debug("Cross-device link %s -> %s", src, fixed_dst)
                     self.link = False
+                else:
+                    logging.debug("OSError %i %s -> %s (%s)", e.errno, src, fixed_dst, str(e))
+                    raise e
+                    
 
         if not self.keep_original:
             logging.debug("Removing original %s", src)
