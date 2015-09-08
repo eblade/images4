@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from enum import IntEnum
-import os, datetime, logging
+import os, datetime, logging, urllib
 from bottle import Bottle, auth_basic, request
 
 from . import Entry, api
@@ -180,18 +180,31 @@ class EntryDescriptor(PropertySet):
 
 class EntryDescriptorFeed(PropertySet):
     count = Property(int)
+    total_count = Property(int)
+    prev_link = Property()
+    next_link = Property()
+    offset = Property(int)
     entries = Property(list)
 
 
 class EntryQuery(PropertySet):
-    start_ts = Property()
-    end_ts = Property()
+    start_ts = Property(none='')
+    end_ts = Property(none='')
+    image = Property(bool, default=True)
+    video = Property(bool, default=False)
+    audio = Property(bool, default=False)
+    other = Property(bool, default=False)
     show_hidden = Property(bool, default=False)
     only_hidden = Property(bool, default=False)
     show_deleted = Property(bool, default=False)
     only_deleted = Property(bool, default=False)
     include_tags = Property(list)
     exclude_tags = Property(list)
+
+    next_ts = Property(none='')
+    prev_offset = Property(int)
+    page_size = Property(int, default=25, required=True)
+    order = Property(default='desc', required=True)
 
     @classmethod
     def map_in_from_request(self):
@@ -200,6 +213,19 @@ class EntryQuery(PropertySet):
         eq.start_ts = request.query.start_ts
         eq.end_ts = request.query.end_ts
 
+        eq.next_ts = request.query.next_ts
+        if not request.query.prev_offset in (None, ''):
+            eq.prev_offset = request.query.prev_offset
+        if not request.query.page_size in (None, ''):
+            eq.page_size = request.query.page_size
+        if not request.query.order in (None, ''):
+            eq.order = request.query.order
+
+        eq.image = request.query.image == 'yes'
+        eq.video = request.query.video == 'yes'
+        eq.audio = request.query.audio == 'yes'
+        eq.other = request.query.other == 'yes'
+        
         eq.show_hidden = request.query.show_hidden == 'yes'
         eq.show_deleted = request.query.show_deleted == 'yes'
         eq.only_hidden = request.query.only_hidden == 'yes'
@@ -208,6 +234,26 @@ class EntryQuery(PropertySet):
         eq.include_tags = [t.strip() for t in (request.query.include_tags or '').split(',') if t.strip()]
         eq.exclude_tags = [t.strip() for t in (request.query.exclude_tags or '').split(',') if t.strip()]
         return eq
+    
+    def to_query_string(self):
+        return urllib.parse.urlencode((
+            ('start_ts', self.start_ts),
+            ('end_ts', self.end_ts),
+            ('next_ts', self.next_ts),
+            ('prev_offset', self.prev_offset or ''),
+            ('page_size', self.page_size),
+            ('order', self.order),
+            ('image', 'yes' if self.image else 'no'),
+            ('video', 'yes' if self.video else 'no'),
+            ('audio', 'yes' if self.audio else 'no'),
+            ('other', 'yes' if self.other else 'no'),
+            ('show_hidden', 'yes' if self.show_hidden else 'no'),
+            ('show_deleted', 'yes' if self.show_deleted else 'no'),
+            ('only_hidden', 'yes' if self.only_hidden else 'no'),
+            ('only_deleted', 'yes' if self.only_deleted else 'no'),
+            ('include_tag', ','.join(self.include_tags)),
+            ('exclude_tag', ','.join(self.exclude_tags)),
+        ))
 
 ################################################################################
 # Entry Internal BASE
@@ -237,6 +283,10 @@ def get_entries(query=None):
                     query.end_ts, '%Y-%m-%d')
                     .replace(hour=0, minute=0, second=0, microsecond=0))
                 q = q.filter(Entry.taken_ts < end_ts)
+            
+            types = [t.value for t in Entry.Type if getattr(query, t.name)]
+            if types:
+                q = q.filter(Entry.type.in_(types))
 
             if not query.show_hidden:
                 q = q.filter(Entry.hidden == False)
@@ -249,15 +299,49 @@ def get_entries(query=None):
 
             for tag in query.include_tags:
                 q = q.filter(Entry.tags.like('%' + tag + '%'))
-               
             for tag in query.exclude_tags:
                 q = q.filter(~Entry.tags.like('%' + tag + '%'))
 
-        logging.info(q)
-        entries = q.limit(100).all()
+        total_count = q.count()
 
-        result = EntryDescriptorFeed(count=len(entries))
-        result.entries = [EntryDescriptor.map_in(entry) for entry in entries]
+        # Default values for when no paging occurs
+        offset = 0
+        total_count_paged = total_count
+
+        # Paging
+        if query is not None:
+            if query.next_ts:
+                end_ts = (datetime.datetime.strptime(
+                    query.next_ts, '%Y-%m-%d %H:%M:%S').replace(microsecond=0))
+                q = q.filter(Entry.taken_ts < end_ts)
+                total_count_paged = q.count()
+                offset = total_count - total_count_paged
+
+            elif query.prev_offset:
+                q = q.offset(query.prev_offset)
+                total_count_paged = total_count
+                offset = query.prev_offset
+
+        logging.info(q)
+        page_size = query.page_size
+        entries = q.limit(page_size).all()
+        count = len(entries)
+
+        result = EntryDescriptorFeed(
+            count=count,
+            total_count=total_count,
+            offset=offset,
+            entries = [EntryDescriptor.map_in(entry) for entry in entries])
+        
+        # Paging
+        if total_count > count:
+            query.next_ts = result.entries[-1].taken_ts
+            result.next_link = BASE + '?' + query.to_query_string()
+
+        if count > 0 and offset > 0:
+            query.next_ts = ''
+            query.prev_offset = max(offset - page_size, 0)
+            result.prev_link = BASE + '?' + query.to_query_string()
 
         return result
 

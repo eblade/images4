@@ -1,9 +1,9 @@
 import json
-from .metadata import wrap_dict
+from .metadata import wrap_dict, wrap_raw_json
 
 class Property(object):
     def __init__(self, type=str, name=None, default=None, enum=None,
-                 required=False, validator=None, wrap=False):
+                 required=False, validator=None, wrap=False, none=None):
         self.name = name
         self.type = enum if enum else type
         self.enum = enum
@@ -11,6 +11,7 @@ class Property(object):
         self.validator = validator
         self.default = default
         self.wrap = wrap
+        self.none = none
     
     def __property_config__(self, model_class, property_name):
         self.model_class = model_class
@@ -30,24 +31,26 @@ class Property(object):
                 return value
         else:
             try:
-                return getattr(model_instance, self.attr_name)
+                value = getattr(model_instance, self.attr_name)
+                if value is None:
+                    return self.none
+                else:
+                    return value
             except AttributeError:
                 return self.default
     
     def __set__(self, model_instance, value):
-        if self.wrap and isinstance(value, dict):
-            value = wrap_dict(value)
-        if issubclass(self.type, PropertySet) and isinstance(value, dict):
-            value = self.type(value)
-        if self.enum:
-            value = self.enum(value)
         value = self.validate(value)
         setattr(model_instance, self.attr_name, value)
     
     def is_empty(self, value):
-        return value is not None
+        return value is None
 
     def validate(self, value):
+        if value is None and not self.required:
+            return None
+
+        # Bool
         try:
             if self.type is bool and value.lower() in ('yes', 'no', 'true', 'false', '1', '0'):
                 if value in ('yes', 'true', '1'):
@@ -56,14 +59,37 @@ class Property(object):
                     value = False
         except AttributeError:
             pass
+
+        # PropertySet - Wrapped
+        if self.wrap:
+            if isinstance(value, dict):
+                value = wrap_dict(value)
+            elif isinstance(value, str):
+                value = wrap_raw_json(value)
+
+        # PropertySet - Direct
+        elif issubclass(self.type, PropertySet) and isinstance(value, dict):
+            value = self.type(value)
+
+        # Enum
+        elif self.enum:
+            value = self.enum(value)
+
+        # Built-ins
+        elif self.type is int or self.type is float or self.type is str:
+            value = self.type(value)
+
+        # Required
         if self.required:
             if self.is_empty(value):
                 raise ValueError("Property %s is required" % self.name)
 
+        # Enum test
         if self.enum is not None:
             if not isinstance(value, self.enum):
-                raise ValueError("Property %s is only accepts enums of type %s" % (self.name, repr(self.enum)))
+                raise ValueError("Property %s must be enum of type %s" % (self.name, repr(self.enum)))
         
+        # External Validator
         if callable(self.validator):
             self.validator(value)
 

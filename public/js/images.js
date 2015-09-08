@@ -11,8 +11,12 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
     $scope.tag_feed = new Object();
     $scope.feed = new Array();
     
-    $scope.q_start_ts = '2000-01-01';
+    $scope.q_start_ts = '';
     $scope.q_end_ts = '';
+    $scope.q_image = 'yes';
+    $scope.q_video = 'no';
+    $scope.q_audio = 'no';
+    $scope.q_other = 'no';
     $scope.q_show_hidden = 'no';
     $scope.q_only_hidden = 'no';
     $scope.q_show_deleted = 'no';
@@ -30,6 +34,7 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
     $scope.tags_mode = function() { return $scope.mode == 'tags'; };
     $scope.metadata_mode = function() { return $scope.mode == 'metadata'; };
     $scope.physical_mode = function() { return $scope.mode == 'physical'; };
+    $scope.debug_mode = function() { return $scope.mode == 'debug'; };
 
     $hotkey.bind('N', function(event) { if ($scope.hk) {
         event.preventDefault(); $scope.set_mode(null); }; });
@@ -41,6 +46,8 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
         event.preventDefault(); $scope.set_mode('metadata'); }; });
     $hotkey.bind('P', function(event) { if ($scope.hk) {
         event.preventDefault(); $scope.set_mode('physical'); }; });
+    $hotkey.bind('D', function(event) { if ($scope.hk) {
+        event.preventDefault(); $scope.set_mode('debug'); }; });
 
     $scope.enable_hk = function() {
         $scope.hk = true;
@@ -79,6 +86,10 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
             params: {
                 start_ts: $scope.q_start_ts,
                 end_ts: $scope.q_end_ts,
+                image: $scope.q_image,
+                video: $scope.q_video,
+                audio: $scope.q_audio,
+                other: $scope.q_other,
                 show_hidden: $scope.q_show_hidden,
                 only_hidden: $scope.q_only_hidden,
                 show_deleted: $scope.q_show_deleted,
@@ -89,6 +100,23 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
         })
             .success(function(data) {
                 $scope.feed = data;
+                if ($scope.feed.count > 0) {
+                    $scope.current = 0;
+                } else {
+                    $scope.current = -1;
+                }
+            });
+    };
+
+    $scope.reload_page = function(url, current) {
+        $http.get(url)
+            .success(function(data) {
+                $scope.feed = data;
+                if (current === 'last') {
+                    $scope.current = $scope.feed.count - 1;
+                } else {
+                    $scope.current = 0;
+                }
             });
     };
 
@@ -115,13 +143,25 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
 
     // Navigation
     $scope.previous = function() {
-        $scope.current = Math.max(0, $scope.current - 1);
+        if ($scope.current === 0) {
+            if ($scope.feed.prev_link) {
+                $scope.reload_page($scope.feed.prev_link, 'last');
+            }
+        } else {
+            $scope.current = Math.max(0, $scope.current - 1);
+        }
     };
     $hotkey.bind('Left', function(event) { if ($scope.hk) {
         event.preventDefault(); $scope.previous(); }; });
 
     $scope.next = function() {
-        $scope.current = Math.min($scope.feed.count - 1, $scope.current + 1);
+        if ($scope.current === $scope.feed.count - 1) {
+            if ($scope.feed.next_link) {
+                $scope.reload_page($scope.feed.next_link, 'first');
+            }
+        } else {
+            $scope.current = Math.min($scope.feed.count - 1, $scope.current + 1);
+        }
     };
     $hotkey.bind('Right', function(event) { if ($scope.hk) {
         event.preventDefault(); $scope.next(); }; });

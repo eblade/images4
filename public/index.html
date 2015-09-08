@@ -21,7 +21,7 @@
                 <button ng-click="set_mode('tags')" />Tags</button>
                 <button ng-click="set_mode('metadata')" />Metadata</button>
                 <button ng-click="set_mode('physical')" />Physical</button>
-                {{me.id}}/{{me.name}} :: {{current}}/{{feed.count}} :: {{message}}
+                {{me.id}} / {{me.name}} :: {{feed.offset + current + 1}} of {{feed.total_count}} :: {{message}}
             </div>
             <div class="query" ng-show="query_mode()">
                 <div class="query_part">
@@ -41,6 +41,9 @@
                         ng-focus="disable_hk()"/>
                 </div>
                 <div class="query_part">
+                    Format like <i>YYYY-MM-DD</i>.
+                </div>
+                <div class="query_part">
                     Have these tags
                     <div class="tag for_query  tag_{{list_have(tag.id, q_include_tags)}}"
                          style="background-color: {{tag.background_color}}; color: {{tag.foreground_color}};"
@@ -57,6 +60,34 @@
                          ng-click="list_toggle(tag.id, q_exclude_tags)">
                         {{tag.id}}
                     </div>
+                </div>
+                <div class="query_part">
+                    <input
+                        type="checkbox"
+                        ng-model="q_image"
+                        ng-true-value="'yes'"
+                        ng-false-value="'no'"/>Image entries
+                </div>
+                <div class="query_part">
+                    <input
+                        type="checkbox"
+                        ng-model="q_video"
+                        ng-true-value="'yes'"
+                        ng-false-value="'no'"/>Video entries
+                </div>
+                <div class="query_part">
+                    <input
+                        type="checkbox"
+                        ng-model="q_audio"
+                        ng-true-value="'yes'"
+                        ng-false-value="'no'"/>Audio entries
+                </div>
+                <div class="query_part">
+                    <input
+                        type="checkbox"
+                        ng-model="q_other"
+                        ng-true-value="'yes'"
+                        ng-false-value="'no'"/>Other entries
                 </div>
                 <div class="query_part">
                     <input
@@ -86,8 +117,8 @@
                         ng-true-value="'yes'"
                         ng-false-value="'no'"/>Show only deleted entries
                 </div>
-                <div class="query_part">
-                    <button ng-click="reload()" />Go</button>
+                <div class="query_part" style="text-align: right;">
+                    Press <i>Enter</i> to <button ng-click="reload()" />Update results</button>
                 </div>
             </div>
             <div class="tags" ng-show="tags_mode()">
@@ -105,6 +136,16 @@
                     ng-focus="disable_hk()"/>
             </div>
             <div class="metadata" ng-show="metadata_mode()">
+                <i>No metadata</i>
+            </div>
+            <div class="metadata" ng-show="debug_mode()">
+                <h3>Feed data</h3>
+                <b>Offset</b>: {{feed.offset}}<br/>
+                <b>Current</b>: {{current}}<br/>
+                <b>Total Count</b>: {{feed.total_count}}<br/>
+                <b>Page Count</b>: {{feed.count}}<br/>
+                <b>Prev link</b>: {{feed.prev_link}}<br/>
+                <b>Next link</b>: {{feed.next_link}}<br/>
             </div>
             <div class="metadata" ng-show="physical_mode()">
                 <div class="warning" ng-show="current_is_deleted()">This entry will be deleted</div>

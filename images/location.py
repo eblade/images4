@@ -49,7 +49,7 @@ api.url().location += get_download_url
 class LocationDescriptor(PropertySet):
 
     type = Property(enum=Location.Type)
-    id = Property()
+    id = Property(int)
     name = Property()
     metadata = Property(wrap=True)
 

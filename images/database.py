@@ -4,6 +4,7 @@ import os, logging, threading
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.schema import CreateTable
 import hashlib
 
 FILENAME = 'images.db'
@@ -33,6 +34,9 @@ class Database(object):
 
     def create_all(self):
         Base.metadata.create_all(self.local.engine)
+
+    def get_sql_for_table(self, table):
+        return CreateTable(table.__table__).compile(self.local.engine)
 
 
 class Transaction(object):

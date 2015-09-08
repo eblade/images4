@@ -123,9 +123,16 @@ class Entry(Base):
         common = 2
         public = 3
 
+    class Type(IntEnum):
+        image = 0
+        video = 1
+        audio = 2
+        other = 3
+
     id = Column(Integer, primary_key=True)
     original_filename = Column(String(256))
     export_filename = Column(String(256))
+    type = Column(Integer, nullable=False, default=Type.image)
     state = Column(Integer, nullable=False, default=State.new)
     hidden = Column(Boolean, nullable=False, default=False)
     delete_ts = Column(DateTime(timezone=True))
