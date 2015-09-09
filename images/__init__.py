@@ -27,6 +27,8 @@ class Location(Base):
         thumb = 6
         upload = 7
         export = 8
+        archive = 9
+        mobile = 10
 
     class DefaultLocationMetadata(PropertySet):
         server = Property()
@@ -36,6 +38,7 @@ class Location(Base):
         auto_user = Property(bool, default=False)
         user_id = Property()
         keep_original = Property(bool, default=False)
+        backup = Property(list)
 
     id = Column(Integer, primary_key=True)
     type = Column(Integer, nullable=False)
@@ -84,6 +87,7 @@ class ImportJob(Base):
         hidden = Property(bool, default=False)
         access = Property(int, default=0)  # Private
         delete_ts = Property()
+        source = Property()
 
     id = Column(Integer, primary_key=True)
     create_ts = Column(DateTime(timezone=True), default=func.now())
@@ -132,6 +136,7 @@ class Entry(Base):
     id = Column(Integer, primary_key=True)
     original_filename = Column(String(256))
     export_filename = Column(String(256))
+    source = Column(String(64))
     type = Column(Integer, nullable=False, default=Type.image)
     state = Column(Integer, nullable=False, default=State.new)
     hidden = Column(Boolean, nullable=False, default=False)
@@ -160,6 +165,16 @@ class Tag(Base):
 
     id = Column(String(128), primary_key=True)
     color = Column(Integer, default=0)
+
+
+class RemoteCopy(Base):
+    __tablename__ = 'remote_copy'
+
+    id = Column(Integer, primary_key=True)
+    entry_id = Column(Integer, ForeignKey('entry.id'), nullable=False)
+    location_id = Column(Integer, ForeignKey('location.id'), nullable=False)
+    path = Column(String(256), nullable=False)
+    deliver_ts = Column(DateTime(timezone=True))
 
 
 register_metadata_schema(Location.DefaultLocationMetadata)

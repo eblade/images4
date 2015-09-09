@@ -2,6 +2,7 @@
 
 import logging, mimetypes, os, errno, re
 from threading import Thread, Event
+from datetime import datetime, timedelta
 
 from bottle import Bottle, auth_basic, request
 from sqlalchemy.orm.exc import NoResultFound
@@ -54,6 +55,7 @@ def rest_trig_import(location_id):
 
 @app.get('/job')
 @auth_basic(authenticate)
+@no_guests()
 def rest_get_import_jobs():
     json = get_import_jobs().to_json()
     logging.info("Import Job feed\n%s", json)
@@ -62,10 +64,19 @@ def rest_get_import_jobs():
 
 @app.get('/job/<import_job_id:int>')
 @auth_basic(authenticate)
+@no_guests()
 def rest_get_import_job_by_id(import_job_id):
     json = get_import_job_by_id(import_job_id).to_json()
     logging.info("Import Job\n%s", json)
     return json
+
+
+@app.delete('/job/<import_job_id:int>')
+@auth_basic(authenticate)
+@no_guests()
+def rest_delete_import_job_by_id(import_job_id):
+    n = delete_import_job_by_id(import_job_id)
+    return {"result": "ok" if n else "nothing deleted"}
 
 
 @app.post('/job/<import_job_id:int>/reset')
@@ -90,6 +101,10 @@ def rest_create_import_job():
     return json
 
 
+def get_job_url(location_id):
+    return '%s/job/%i' % (BASE, location_id)
+
+
 def get_trig_url(location_id):
     return '%s/trig/%i' % (BASE, location_id)
 
@@ -98,6 +113,7 @@ def get_reset_url(import_job_id):
     return '%s/job/%i/reset' % (BASE, import_job_id)
 
 
+api.url().import_job += get_job_url
 api.url().import_job += get_trig_url
 api.url().import_job += get_reset_url
 
@@ -138,6 +154,7 @@ class ImportJobDescriptor(PropertySet):
     update_ts = Property()
 
     mime_type = Property()
+    self_url = Property()
     trig_reset_url = Property()
 
     @property
@@ -157,6 +174,7 @@ class ImportJobDescriptor(PropertySet):
         logging.debug("Guessed MIME Type '%s' for '%s'", self.mime_type, self.full_path)
 
     def calculate_urls(self):
+        self.self_url = get_job_url(self.id)
         if self.state is not ImportJob.State.new:
             self.trig_reset_url = get_reset_url(self.id)
 
@@ -356,6 +374,26 @@ def reset_import_job(import_job_id):
     return jd
 
 
+def delete_old_import_jobs():
+    logging.info("Deleting old Import Jobs.")
+    with get_db().transaction() as t:
+        n = t.query(ImportJob).filter(
+            ImportJob.state == ImportJob.State.done,
+            ImportJob.update_ts < (datetime.utcnow()-timedelta(hours=1))
+        ).delete(syncronize_session=False)
+        logging.info("Deleted %i old Import Jobs.", n)
+        return n
+
+
+def delete_import_job_by_id(import_job_id):
+    logging.info("Deleting Import Job %i.", import_job_id)
+    with get_db().transaction() as t:
+        n = t.query(ImportJob).filter(
+            ImportJob.id == import_job_id
+        ).delete()
+        logging.info("Deleted %s.", "one job" if n else "no jobs")
+        return n
+
 
 ################################################################################
 # Threaded Import Manager (Singleton)
@@ -383,6 +421,17 @@ class ImportManager(object):
             )
             thread.daemon = True
             thread.start()
+
+        logging.info("Setting up import job cleaning thread importer_cleaner")
+        event = Event()
+        self.events['clean'] = event
+        thread = Thread(
+            target=cleaning_loop,
+            name="importer_cleaner",
+            args=(event,)
+        )
+        thread.daemon = True
+        thread.start()
 
     def trig(self, location_id):
         event = self.events.get(location_id)
@@ -436,6 +485,7 @@ def importing_loop(import_event, location):
                 ed.hidden = jd.metadata.hidden
                 ed.delete_ts = jd.metadata.delete_ts
                 ed.access = jd.metadata.access
+                ed.metadata = jd.metadata.metadata
 
             logging.debug("EntryDescriptor:\n%s", ed.to_json())
             
@@ -445,3 +495,15 @@ def importing_loop(import_event, location):
             jd.state = ImportJob.State.done
             update_import_job_by_id(jd.id, jd)
             logging.info("Import Job Done %s", jd.path)
+
+def cleaning_loop(clean_event):
+    """
+    A cleaning loop that will wait for clean_event to be set
+    each iteration.
+    """
+    logging.info("Started import job cleaning thread")
+    while True:
+        clean_event.wait(5)
+        clean_event.clear()
+
+        delete_old_import_jobs()

@@ -87,6 +87,9 @@ with db.transaction() as t:
 
         extra_name = 'Location:%s' % name
         extra = config[extra_name] if extra_name in config.sections() else {}
+        extra = {k: v for k, v in extra.items()}
+        if 'backup' in extra:
+            extra['backup'] = [b.strip() for b in extra['backup'].split(',') if b]
 
         metadata = data=Location.DefaultLocationMetadata(extra)
         metadata.folder = path

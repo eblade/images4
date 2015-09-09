@@ -4,7 +4,7 @@ import logging, datetime, os
 from . import api, Location
 from bottle import Bottle, auth_basic, static_file
 from .types import PropertySet, Property
-from .user import authenticate
+from .user import authenticate, require_admin
 from .database import get_db
 from .metadata import wrap_raw_json
 
@@ -20,6 +20,7 @@ api.register(BASE, app)
 
 @app.get('/')
 @auth_basic(authenticate)
+@require_admin()
 def rest_get_locations():
     json = get_locations().to_json()
     logging.info("Import Job feed\n%s", json)

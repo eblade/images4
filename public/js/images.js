@@ -338,6 +338,13 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
             });
     };
 
+    $scope.delete = function(url) {
+        $http.delete(url)
+            .success(function(data) {
+                $scope.message = data.result;
+            });
+    };
+
     $scope.bool2str = function(b) {
         return b ? 'yes' : 'no';
     }
@@ -356,6 +363,8 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
         6: 'thumb',
         7: 'upload',
         8: 'export',
+        9: 'archive',
+        10: 'mobile',
     };
 
     // Load resources

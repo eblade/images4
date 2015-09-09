@@ -19,9 +19,10 @@
             <div ng-controller="Location" class="manage" ng-if="location_mode()">
                 <table>
                     <tr>
-                        <th>Id</th>
+                        <th class="number">Id</th>
                         <th>Name</th>
                         <th>Folder</th>
+                        <th>Subfolder</th>
                         <th>Type</th>
                         <th class="number">User Id</th>
                         <th>Keep Original</th>
@@ -31,9 +32,10 @@
                         <th>Import</th>
                     </tr>
                     <tr ng-repeat="location in location_feed.entries">
-                        <td>{{location.id}}</td>
+                        <td class="number">{{location.id}}</td>
                         <td>{{location.name}}</td>
                         <td>{{location.metadata.folder}}</td>
+                        <td>{{location.metadata.subfolder}}</td>
                         <td>{{location_type[location.type]}}</td>
                         <td class="number">{{location.metadata.user_id}}</td>
                         <td class="{{bool2str(location.metadata.keep_original)}}">{{bool2str(location.metadata.keep_original)}}</td>
@@ -53,10 +55,10 @@
             <div ng-controller="ImportJob" class="manage" ng-if="import_job_mode()">
                 <table>
                     <tr>
-                        <th>Id</th>
+                        <th class="number">Id</th>
                         <th>Location</th>
                         <th>Path</th>
-                        <th>User Id</th>
+                        <th class="number">User Id</th>
                         <th>State</th>
                         <th>Created</th>
                         <th>Updated</th>
@@ -64,10 +66,10 @@
                         <th>Reset</th>
                     </tr>
                     <tr ng-repeat="import_job in import_job_feed.entries">
-                        <td>{{import_job.id}}</td>
+                        <td class="number">{{import_job.id}}</td>
                         <td>{{import_job.location.id}}</td>
                         <td>{{import_job.path}}</td>
-                        <td>{{import_job.user_id}}</td>
+                        <td class="number">{{import_job.user_id}}</td>
                         <td class="{{import_job_state[import_job.state]}}">{{import_job_state[import_job.state]}}</td>
                         <td>{{import_job.create_ts}}</td>
                         <td>{{import_job.update_ts}}</td>
@@ -75,6 +77,10 @@
                         <td><button 
                                 ng-show="import_job.trig_reset_url"
                                 ng-click="empty_post(import_job.trig_reset_url)">Reset</button>
+                        </td>
+                        <td><button 
+                                ng-show="import_job.self_url"
+                                ng-click="delete(import_job.self_url)">Delete</button>
                         </td>
                     </tr>
                 </table>
