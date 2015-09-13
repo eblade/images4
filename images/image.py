@@ -98,11 +98,13 @@ class JPEGImportModule(GenericImportModule):
 
         orientation, mirror, angle = exif_orientation(exif)
         lon, lat = exif_position(exif)
+        logging.debug(exif)
         
         return {
             "Artist": exif_string(exif, "Image Artist"),
             "ColorSpace": exif_string(exif, "EXIF ColorSpace"),
             "Copyright": exif_string(exif, "Image Copyright"),
+            "Geometry": (exif_int(exif, "EXIF ExifImageWidth"), exif_int(exif, "EXIF ExifImageLength")),
             "DateTime": exif_string(exif, "EXIF DateTime"),
             "DateTimeDigitized": exif_string(exif, "EXIF DateTimeDigitized"),
             "DateTimeOriginal": exif_string(exif, "EXIF DateTimeOriginal"),
@@ -141,6 +143,7 @@ class JPEGMetadata(Entry.DefaultPhysicalMetadata):
     Flash = Property()
     FocalLength = Property(tuple)
     FocalLengthIn35mmFilm = Property(int)
+    Geometry = Property(tuple)
     ISOSpeedRatings = Property(int)
     Make = Property()
     Model = Property()

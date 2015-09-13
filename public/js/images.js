@@ -11,18 +11,21 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
     $scope.tag_feed = new Object();
     $scope.feed = new Array();
     
-    $scope.q_start_ts = '';
-    $scope.q_end_ts = '';
-    $scope.q_image = 'yes';
-    $scope.q_video = 'no';
-    $scope.q_audio = 'no';
-    $scope.q_other = 'no';
-    $scope.q_show_hidden = 'no';
-    $scope.q_only_hidden = 'no';
-    $scope.q_show_deleted = 'no';
-    $scope.q_only_deleted = 'no';
-    $scope.q_include_tags = Array();
-    $scope.q_exclude_tags = Array();
+    $scope.reset_query = function () {
+        $scope.q_start_ts = '';
+        $scope.q_end_ts = '';
+        $scope.q_image = 'yes';
+        $scope.q_video = 'no';
+        $scope.q_audio = 'no';
+        $scope.q_other = 'no';
+        $scope.q_show_hidden = 'no';
+        $scope.q_only_hidden = 'no';
+        $scope.q_show_deleted = 'no';
+        $scope.q_only_deleted = 'no';
+        $scope.q_include_tags = Array();
+        $scope.q_exclude_tags = Array();
+        $scope.q_source = '';
+    };
 
     $scope.hk = true;
 
@@ -35,6 +38,7 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
     $scope.metadata_mode = function() { return $scope.mode == 'metadata'; };
     $scope.physical_mode = function() { return $scope.mode == 'physical'; };
     $scope.debug_mode = function() { return $scope.mode == 'debug'; };
+    $scope.upload_mode = function() { return $scope.mode == 'upload'; };
 
     $hotkey.bind('N', function(event) { if ($scope.hk) {
         event.preventDefault(); $scope.set_mode(null); }; });
@@ -47,7 +51,9 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
     $hotkey.bind('P', function(event) { if ($scope.hk) {
         event.preventDefault(); $scope.set_mode('physical'); }; });
     $hotkey.bind('D', function(event) { if ($scope.hk) {
-        event.preventDefault(); $scope.set_mode('debug'); }; });
+        event.preventdefault(); $scope.set_mode('debug'); }; });
+    $hotkey.bind('U', function(event) { if ($scope.hk) {
+        event.preventdefault(); $scope.set_mode('upload'); }; });
 
     $scope.enable_hk = function() {
         $scope.hk = true;
@@ -75,9 +81,11 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
 
     // Entry API
     $scope.update_entry = function(entry) {
+        var current_before = $scope.current;
         $http.put(entry.self_url, entry)
             .success(function(data) {
                 $scope.message = "Entry updated";
+                $scope.feed.entries[current_before] = data;
             });
     };
 
@@ -96,6 +104,7 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
                 only_deleted: $scope.q_only_deleted,
                 include_tags: $scope.q_include_tags.join(),
                 exclude_tags: $scope.q_exclude_tags.join(),
+                source: $scope.q_source,
             }
         })
             .success(function(data) {
@@ -120,6 +129,13 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
             });
     };
 
+    $scope.show_from_source = function(source) {
+        $scope.reset_query();
+        $scope.q_source = source;
+        $scope.reload();
+    };
+
+    $scope.reset_query();
     $scope.reload();
 
     // Tags API
@@ -256,7 +272,9 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
     }
 
     $scope.get_access = function(entry) {
-        if (entry.access == 0) {
+        if (!entry) {
+            return '';
+        } else if (entry.access == 0) {
             return 'P';
         } else if (entry.access == 1) {
             return 'U';
@@ -264,6 +282,32 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
             return 'C';
         } else if (entry.access == 3) {
             return 'A';
+        }
+    };
+
+    $scope.get_access_long = function(entry) {
+        if (!entry) {
+            return '';
+        } else if (entry.access == 0) {
+            return 'Only I can see';
+        } else if (entry.access == 1) {
+            return 'All users can see';
+        } else if (entry.access == 2) {
+            return 'All users can see and edit';
+        } else if (entry.access == 3) {
+            return 'Everyone can see';
+        }
+    };
+
+    $scope.get_purpose = function(number) {
+        if (number == 0) {
+            return 'primary';
+        } else if (number == 1) {
+            return 'proxy';
+        } else if (number == 2) {
+            return 'thumb';
+        } else if (number == 3) {
+            return 'attachment';
         }
     };
 
@@ -324,6 +368,7 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
     $scope.no_mode = function() { return $scope.mode == null; };
     $scope.location_mode = function() { return $scope.mode == 'location'; };
     $scope.import_job_mode = function() { return $scope.mode == 'import_job'; };
+    $scope.deletion_mode = function() { return $scope.mode == 'deletion'; };
 
     // Load resources
     $http.get('user/me')
@@ -365,6 +410,7 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
         8: 'export',
         9: 'archive',
         10: 'mobile',
+        11: 'legacy',
     };
 
     // Load resources
@@ -383,12 +429,24 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
         2: 'done',
         3: 'failed',
         4: 'hold',
+        5: 'keep',
     };
 
     // Load resources
     $http.get('import/job')
         .success(function(data) {
             $scope.import_job_feed = data;
+        });
+})
+
+.controller('Deletion', function ($scope, $http) {
+    // Initialize
+    $scope.delete_info = Object();
+
+    // Load resources
+    $http.get('delete')
+        .success(function(data) {
+            $scope.delete_info = data;
         });
 })
 
@@ -407,19 +465,43 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
         scope.$watch(attrs.scrollIf, function(value) {
             if (value) {
                 var sp = getScrollingParent(element[0]);
-                var leftMargin = parseInt(attrs.scrollMarginLeft) || 0;
-                var rightMargin = parseInt(attrs.scrollMarginRight) || 0;
-                var elemOffset = element[0].offsetLeft;
-                var elemWidth = element[0].clientWidth;
+                if (sp) {
+                    var leftMargin = parseInt(attrs.scrollMarginLeft) || 0;
+                    var rightMargin = parseInt(attrs.scrollMarginRight) || 0;
+                    var elemOffset = element[0].offsetLeft;
+                    var elemWidth = element[0].clientWidth;
 
-                if (elemOffset - leftMargin < sp.scrollLeft) {
-                    sp.scrollLeft = elemOffset - leftMargin;
-                } else if (elemOffset + elemWidth + rightMargin > sp.scrollLeft + sp.clientWidth) {
-                    sp.scrollLeft = elemOffset + elemWidth + rightMargin - sp.clientWidth;
+                    if (elemOffset - leftMargin < sp.scrollLeft) {
+                        sp.scrollLeft = elemOffset - leftMargin;
+                    } else if (elemOffset + elemWidth + rightMargin > sp.scrollLeft + sp.clientWidth) {
+                        sp.scrollLeft = elemOffset + elemWidth + rightMargin - sp.clientWidth;
+                    }
                 }
             }
         });
     }
 })
+
+.directive('imageUpload', ['$http', function($http) {
+    return function(scope, element, attr) {
+        element.on('change', function(event) {
+            event.preventDefault();
+            var
+                image = element[0].files[0],
+                reader = new FileReader(),
+                filename = element[0].value.replace(/.*[\/\\]/, '');
+            reader.onload = function(e) {
+                $http.post(
+                    'import/upload/web/' + filename, 
+                    e.target.result, {
+                        headers: { 'Content-Type': 'base64' }, })
+                .then(function () {
+                    scope.uploaded_image = e.target.result;
+                })
+            };
+            reader.readAsDataURL(image);
+        });
+    };
+}])
 
 ;

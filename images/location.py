@@ -1,7 +1,7 @@
 
 import logging, datetime, os
 
-from . import api, Location
+from . import api, Location, SCANNABLE, IMPORTABLE
 from bottle import Bottle, auth_basic, static_file
 from .types import PropertySet, Property
 from .user import authenticate, require_admin
@@ -23,7 +23,7 @@ api.register(BASE, app)
 @require_admin()
 def rest_get_locations():
     json = get_locations().to_json()
-    logging.info("Import Job feed\n%s", json)
+    logging.debug("Import Job feed\n%s", json)
     return json
 
 
@@ -67,6 +67,10 @@ class LocationDescriptor(PropertySet):
         folder = self.metadata.folder
         if 'date' not in hints:
             hints['date'] = datetime.date.today().isoformat()
+        if 'type' not in hints:
+            hints['type'] = 'unknown'
+        if 'source' not in hints:
+            hints['source'] = 'unknown'
         subfolder = self.metadata.subfolder.format(**hints)
         return os.path.join(folder, subfolder)
 
@@ -75,9 +79,9 @@ class LocationDescriptor(PropertySet):
 
     def calculate_urls(self):
         self.self_url = '%s/%i' % (BASE, self.id)
-        if self.type is Location.Type.drop_folder:
+        if self.type in SCANNABLE:
             self.trig_scan_url = api.url().scanner.get_trig_url(self.id)
-        if self.type in (Location.Type.drop_folder, Location.Type.upload):
+        if self.type in IMPORTABLE:
             self.trig_import_url = api.url().import_job.get_trig_url(self.id)
 
     @classmethod
@@ -129,3 +133,7 @@ def get_locations():
             count=len(locations),
             entries=[LocationDescriptor.map_in(location) for location in locations]
         )
+
+
+def delete_file_on_location(location, path):
+    os.remove(os.path.join(location.metadata.folder, path))

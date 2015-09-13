@@ -29,6 +29,7 @@ class Location(Base):
         export = 8
         archive = 9
         mobile = 10
+        legacy = 11
 
     class DefaultLocationMetadata(PropertySet):
         server = Property()
@@ -39,11 +40,29 @@ class Location(Base):
         user_id = Property()
         keep_original = Property(bool, default=False)
         backup = Property(list)
+        source = Property()
+        hidden = Property(bool)
+        access = Property(int)
+        tags = Property(list)
+        read_only = Property(bool)
 
     id = Column(Integer, primary_key=True)
     type = Column(Integer, nullable=False)
     name = Column(String(128), nullable=False)
     data = Column(String(512))
+
+
+# Location Groups
+IMPORTABLE = (
+    Location.Type.drop_folder,
+    Location.Type.upload,
+    Location.Type.legacy,
+    Location.Type.mobile
+)
+SCANNABLE = (
+    Location.Type.drop_folder,
+    Location.Type.mobile
+)
 
 
 class User(Base):
@@ -78,7 +97,8 @@ class ImportJob(Base):
         active = 1
         done = 2 
         failed = 3
-        hold = 4
+        hold = 4  # don't start yet
+        keep = 5  # don't clean this
 
     class DefaultImportJobMetadata(PropertySet):
         tags = Property(list)
@@ -97,6 +117,7 @@ class ImportJob(Base):
     data = Column(String(8192))
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     location_id = Column(Integer, ForeignKey('location.id'), nullable=False)
+    entry_id = Column(Integer, ForeignKey('entry.id'))
 
     user = relationship(User)
     location = relationship(Location, backref=backref('import_jobs', lazy='dynamic'))

@@ -1,19 +1,20 @@
 """Take care of import jobs and copying files. Keep track of import modules"""
 
-import logging, mimetypes, os, errno, re
+import logging, mimetypes, os, errno, re, base64
 from threading import Thread, Event
 from datetime import datetime, timedelta
 
 from bottle import Bottle, auth_basic, request
 from sqlalchemy.orm.exc import NoResultFound
 
-from . import api, ImportJob, Location, Entry
+from . import api, ImportJob, Location, Entry, IMPORTABLE
 from .database import get_db
 from .types import PropertySet, Property
-from .user import authenticate, no_guests
-from .location import LocationDescriptor, get_locations_by_type
+from .user import authenticate, no_guests, current_user_id
+from .location import LocationDescriptor, get_locations_by_type, get_location_by_type
 from .metadata import wrap_raw_json
 from .entry import create_entry
+
 
 
 ################################################################################
@@ -30,7 +31,7 @@ api.register(BASE, app)
 @no_guests()
 def rest_get_importers():
     entries = []
-    for location in get_locations_by_type(Location.Type.drop_folder).entries:
+    for location in get_locations_by_type(*IMPORTABLE).entries:
         entries.append({
             'location_id': location.id,
             'location_name': location.name,
@@ -92,12 +93,49 @@ def rest_reset_import_job(import_job_id):
 @auth_basic(authenticate)
 @no_guests()
 def rest_create_import_job():
-    logging.info(request.headers)
-    logging.info(request.json)
     jd = ImportJobDescriptor(request.json)
     logging.info("Incoming Import Job\n%s", jd.to_json())
     json = create_import_job(jd).to_json()
     logging.info("Created Import Job\n%s", json)
+    rest_trig_import(jd.location.id)
+    return json
+
+
+@app.post('/upload/<source>/<filename>')
+@auth_basic(authenticate)
+@no_guests()
+def rest_upload(source, filename):
+    location = get_location_by_type(Location.Type.upload)
+    folder = location.suggest_folder(source=source)
+    try:
+        os.makedirs(folder)
+    except FileExistsError:
+        pass
+    destination = os.path.join(folder, filename)
+    logging.info("Storing file at %s.", destination)
+    with open(destination, 'w+b') as disk:
+        data = request.body.read()
+        logging.info(request.headers['Content-Type'])
+        if request.headers['Content-Type'].startswith('base64'):
+            data = base64.b64decode(data[22:])
+            logging.info("Writing %i bytes after base64 decode", len(data))
+        else:
+            logging.info("Writing %i bytes without decode", len(data))
+        disk.write(data)
+    request.body.close()
+
+    # Create an Import Job for this
+    jd = create_import_job(ImportJobDescriptor(
+        path = os.path.relpath(destination, location.get_root()),
+        user_id = current_user_id(),
+        location = location,
+        metadata = ImportJob.DefaultImportJobMetadata(
+            source = source,
+        ),
+    ))
+    rest_trig_import(jd.location.id)
+
+    json = jd.to_json()
     return json
 
 
@@ -152,6 +190,7 @@ class ImportJobDescriptor(PropertySet):
     state = Property(enum=ImportJob.State)
     create_ts = Property()
     update_ts = Property()
+    entry_id = Property(int)
 
     mime_type = Property()
     self_url = Property()
@@ -191,6 +230,7 @@ class ImportJobDescriptor(PropertySet):
                        if import_job.create_ts is not None else None),
             update_ts=(import_job.update_ts.strftime('%Y-%m-%d %H:%M:%S')
                        if import_job.update_ts is not None else None),
+            entry_id = import_job.entry_id
         )
         jd.calculate_urls()
         return jd
@@ -202,6 +242,7 @@ class ImportJobDescriptor(PropertySet):
         import_job.user_id = self.user_id
         import_job.location_id = self.location.id if self.location is not None else None
         import_job.state = self.state
+        import_job.entry_id = self.entry_id
 
 
 class ImportJobDescriptorFeed(PropertySet):
@@ -292,7 +333,7 @@ def get_import_job_by_id(id):
 
 def get_import_jobs():
     with get_db().transaction() as t:
-        import_jobs = t.query(ImportJob).order_by(ImportJob.update_ts.desc()).all()
+        import_jobs = t.query(ImportJob).order_by(ImportJob.update_ts.desc()).limit(100).all()
         return ImportJobDescriptorFeed(
             count=len(import_jobs),
             entries=[ImportJobDescriptor.map_in(import_job) for import_job in import_jobs]
@@ -320,7 +361,6 @@ def create_import_job(jd): # ImportJobDescriptor
             id = import_job.id
     
     jd = get_import_job_by_id(id)
-    rest_trig_import(jd.location.id)
     return jd
 
 def pick_up_import_job(location_id):
@@ -380,7 +420,7 @@ def delete_old_import_jobs():
         n = t.query(ImportJob).filter(
             ImportJob.state == ImportJob.State.done,
             ImportJob.update_ts < (datetime.utcnow()-timedelta(hours=1))
-        ).delete(syncronize_session=False)
+        ).delete(synchronize_session=False)
         logging.info("Deleted %i old Import Jobs.", n)
         return n
 
@@ -410,24 +450,24 @@ class ImportManager(object):
         self.events = {}
         rest_trig_import.manager = self
 
-        for location in get_locations_by_type(Location.Type.drop_folder, Location.Type.upload).entries:
-            logging.info("Setting up import thread importer_%s", location.id)
+        for location in get_locations_by_type(*IMPORTABLE).entries:
+            logging.info("Setting up import thread [Importer%i].", location.id)
             event = Event()
             self.events[location.id] = event
             thread = Thread(
                 target=importing_loop,
-                name="importer_%i" % (location.id),
+                name="Importer%i" % (location.id),
                 args=(event, location)
             )
             thread.daemon = True
             thread.start()
 
-        logging.info("Setting up import job cleaning thread importer_cleaner")
+        logging.info("Setting up import job cleaning thread [ImportCleaner].")
         event = Event()
         self.events['clean'] = event
         thread = Thread(
             target=cleaning_loop,
-            name="importer_cleaner",
+            name="ImportCleaner",
             args=(event,)
         )
         thread.daemon = True
@@ -479,20 +519,31 @@ def importing_loop(import_event, location):
 
             ed = import_module.entry
             ed.user_id = jd.user_id or import_module.user_id
-            if jd.metadata:
-                if jd.metadata.tags:
-                    ed.tags = jd.metadata.tags
-                ed.hidden = jd.metadata.hidden
-                ed.delete_ts = jd.metadata.delete_ts
-                ed.access = jd.metadata.access
-                ed.metadata = jd.metadata.metadata
+
+            if not jd.metadata:
+                jd.metadata = ImportJob.DefaultImportJobMetadata()
+
+            if jd.metadata.tags:
+                ed.tags = jd.metadata.tags
+            elif metadata.tags:
+                ed.tags = metadata.tags
+            ed.hidden = jd.metadata.hidden or metadata.hidden
+            ed.delete_ts = jd.metadata.delete_ts
+            ed.access = jd.metadata.access or metadata.access
+            ed.metadata = jd.metadata.metadata
+            ed.source = jd.metadata.source or metadata.source
 
             logging.debug("EntryDescriptor:\n%s", ed.to_json())
             
             ed.state = Entry.State.online
-            create_entry(ed, system=True)
+            ed = create_entry(ed, system=True)
 
-            jd.state = ImportJob.State.done
+            if metadata.keep_original:
+                jd.state = ImportJob.State.keep
+            else:
+                jd.state = ImportJob.State.done
+
+            jd.entry_id = ed.id
             update_import_job_by_id(jd.id, jd)
             logging.info("Import Job Done %s", jd.path)
 
@@ -503,7 +554,7 @@ def cleaning_loop(clean_event):
     """
     logging.info("Started import job cleaning thread")
     while True:
-        clean_event.wait(5)
+        clean_event.wait(720)
         clean_event.clear()
 
         delete_old_import_jobs()

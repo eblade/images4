@@ -4,12 +4,14 @@ import os, logging
 from threading import Thread, Event
 from bottle import Bottle, auth_basic
 
-from . import api, Location
+from . import api, Location, SCANNABLE
 from .database import get_db
 from .location import LocationDescriptor, get_locations_by_type
 from .import_job import ImportJobDescriptor, create_import_job
 from .metadata import wrap_raw_json
 from .user import authenticate, no_guests
+
+
 
 
 ################################################################################
@@ -26,7 +28,7 @@ api.register(BASE, app)
 @no_guests()
 def rest_get_scanners():
     entries = []
-    for location in get_locations_by_type(Location.Type.drop_folder).entries:
+    for location in get_locations_by_type(*SCANNABLE).entries:
         entries.append({
             'location_id': location.id,
             'location_name': location.name,
@@ -91,13 +93,13 @@ class ScannerManager(object):
         self.events = {}
         rest_trig_scan.manager = self
 
-        for location in get_locations_by_type(Location.Type.drop_folder).entries:
-            logging.info("Setting up scanner thread scanner_%s", location.id)
+        for location in get_locations_by_type(*SCANNABLE).entries:
+            logging.info("Setting up scanner thread [Scanner%i]", location.id)
             event = Event()
             self.events[location.id] = event
             thread = Thread(
                 target=scanning_loop,
-                name="scanner_%i" % (location.id),
+                name="Scanner%i" % (location.id),
                 args=(event, location)
             )
             thread.daemon = True

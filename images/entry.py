@@ -38,7 +38,6 @@ def rest_get_entries():
 def rest_get_entry_by_id(id):
     json = get_entry_by_id(id).to_json()
     logging.debug("Entry\n%s", json)
-    may_see(entry)
     return json
 
 
@@ -52,6 +51,23 @@ def rest_update_entry_by_id(id):
     logging.debug("Outgoing Entry\n%s", json)
     return json
 
+
+@app.delete('/<id:int>')
+@auth_basic(authenticate)
+@no_guests()
+def rest_delete_entry_by_id(id):
+    logging.debug("Deleting Entry %i", id)
+    delete_entry_by_id(id)
+
+
+@app.post('/source/<source>/<filename>')
+@auth_basic(authenticate)
+@no_guests()
+def rest_get_entry_by_source(source, filename):
+    json = get_entry_by_source(source, filename).to_json()
+    logging.debug("Entry\n%s", json)
+    return json
+    
 
 ################################################################################
 # Entry Descriptors
@@ -78,6 +94,7 @@ class EntryDescriptor(PropertySet):
     path = Property()
     original_filename = Property()
     export_filename = Property()
+    source = Property()
     state = Property(enum=Entry.State)
     hidden = Property(bool, default=False)
     delete_ts = Property()
@@ -134,6 +151,7 @@ class EntryDescriptor(PropertySet):
             state=Entry.State(entry.state),
             access=Entry.Access(entry.access),
             original_filename=entry.original_filename,
+            source=entry.source,
             create_ts=entry.create_ts.strftime('%Y-%m-%d %H:%M:%S'),
             update_ts=entry.update_ts.strftime('%Y-%m-%d %H:%M:%S') if entry.update_ts else None,
             taken_ts=entry.taken_ts.strftime('%Y-%m-%d %H:%M:%S') if entry.taken_ts else None,
@@ -151,6 +169,7 @@ class EntryDescriptor(PropertySet):
     def map_out(self, entry, system=False):
         entry.original_filename = self.original_filename
         entry.export_filename = self.export_filename
+        entry.source = self.source
         entry.state = self.state
         entry.hidden = self.hidden
         entry.taken_ts = (datetime.datetime.strptime(
@@ -200,6 +219,7 @@ class EntryQuery(PropertySet):
     only_deleted = Property(bool, default=False)
     include_tags = Property(list)
     exclude_tags = Property(list)
+    source = Property()
 
     next_ts = Property(none='')
     prev_offset = Property(int)
@@ -225,6 +245,8 @@ class EntryQuery(PropertySet):
         eq.video = request.query.video == 'yes'
         eq.audio = request.query.audio == 'yes'
         eq.other = request.query.other == 'yes'
+
+        eq.source = request.query.source
         
         eq.show_hidden = request.query.show_hidden == 'yes'
         eq.show_deleted = request.query.show_deleted == 'yes'
@@ -247,6 +269,7 @@ class EntryQuery(PropertySet):
             ('video', 'yes' if self.video else 'no'),
             ('audio', 'yes' if self.audio else 'no'),
             ('other', 'yes' if self.other else 'no'),
+            ('source', self.source),
             ('show_hidden', 'yes' if self.show_hidden else 'no'),
             ('show_deleted', 'yes' if self.show_deleted else 'no'),
             ('only_hidden', 'yes' if self.only_hidden else 'no'),
@@ -302,6 +325,9 @@ def get_entries(query=None):
             for tag in query.exclude_tags:
                 q = q.filter(~Entry.tags.like('%' + tag + '%'))
 
+            if query.source:
+                q = q.filter(Entry.source == query.source)
+
         total_count = q.count()
 
         # Default values for when no paging occurs
@@ -349,7 +375,16 @@ def get_entries(query=None):
 def get_entry_by_id(id):
     with get_db().transaction() as t:
         entry = t.query(Entry).filter(Entry.id==id).one()
+        return EntryDescriptor.map_in(entry) 
 
+
+def get_entry_by_source(source, filename):
+    with get_db().transaction() as t:
+        entry = t.query(Entry).filter(
+            Entry.source == source,
+            Entry.filename == filename,
+            (Entry.user_id == current_user_id()) | (Entry.access >= Entry.Access.public)
+        ).one()
         return EntryDescriptor.map_in(entry) 
 
 
@@ -379,3 +414,8 @@ def create_entry(ed, system=False):
         id = entry.id
 
     return get_entry_by_id(id)
+
+
+def delete_entry_by_id(id):
+    with get_db().transaction() as t:
+        t.query(Entry).filter(Entry.id==id).delete()

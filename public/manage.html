@@ -14,9 +14,11 @@
             <div class="title">
                 <button ng-click="set_mode('location')" />Locations</button>
                 <button ng-click="set_mode('import_job')" />Import Jobs</button>
+                <button ng-click="set_mode('deletion')" />Deletions</button>
                 {{me.name}}/{{me.id}} :: {{message}}
             </div>
             <div ng-controller="Location" class="manage" ng-if="location_mode()">
+                <h3>Locations</h3>
                 <table>
                     <tr>
                         <th class="number">Id</th>
@@ -25,7 +27,9 @@
                         <th>Subfolder</th>
                         <th>Type</th>
                         <th class="number">User Id</th>
+                        <th>Source</th>
                         <th>Keep Original</th>
+                        <th>Read Only</th>
                         <th>Auto Tag</th>
                         <th>Auto User</th>
                         <th>Scan</th>
@@ -38,9 +42,19 @@
                         <td>{{location.metadata.subfolder}}</td>
                         <td>{{location_type[location.type]}}</td>
                         <td class="number">{{location.metadata.user_id}}</td>
-                        <td class="{{bool2str(location.metadata.keep_original)}}">{{bool2str(location.metadata.keep_original)}}</td>
-                        <td class="{{bool2str(location.metadata.auto_tag)}}">{{bool2str(location.metadata.auto_tag)}}</td>
-                        <td class="{{bool2str(location.metadata.auto_user)}}">{{bool2str(location.metadata.auto_user)}}</td>
+                        <td>{{location.metadata.source}}</td>
+                        <td class="{{bool2str(location.metadata.keep_original)}}">
+                            {{bool2str(location.metadata.keep_original)}}
+                        </td>
+                        <td class="{{bool2str(location.metadata.read_only)}}">
+                            {{bool2str(location.metadata.read_only)}}
+                        </td>
+                        <td class="{{bool2str(location.metadata.auto_tag)}}">
+                            {{bool2str(location.metadata.auto_tag)}}
+                        </td>
+                        <td class="{{bool2str(location.metadata.auto_user)}}">
+                            {{bool2str(location.metadata.auto_user)}}
+                        </td>
                         <td><button 
                                 ng-show="location.trig_scan_url"
                                 ng-click="empty_post(location.trig_scan_url)">Scan now</button>
@@ -53,10 +67,12 @@
                 </table>
             </div>
             <div ng-controller="ImportJob" class="manage" ng-if="import_job_mode()">
+                <h3>Import Job</h3>
                 <table>
                     <tr>
                         <th class="number">Id</th>
-                        <th>Location</th>
+                        <th class="number">Location</th>
+                        <th class="number">Entry</th>
                         <th>Path</th>
                         <th class="number">User Id</th>
                         <th>State</th>
@@ -67,7 +83,8 @@
                     </tr>
                     <tr ng-repeat="import_job in import_job_feed.entries">
                         <td class="number">{{import_job.id}}</td>
-                        <td>{{import_job.location.id}}</td>
+                        <td class="number">{{import_job.location.id}}</td>
+                        <td class="number">{{import_job.entry_id}}</td>
                         <td>{{import_job.path}}</td>
                         <td class="number">{{import_job.user_id}}</td>
                         <td class="{{import_job_state[import_job.state]}}">{{import_job_state[import_job.state]}}</td>
@@ -84,6 +101,14 @@
                         </td>
                     </tr>
                 </table>
+            </div>
+            <div ng-controller="Deletion" class="manage" ng-if="deletion_mode()">
+                <h3>Deletions</h3>
+                <p>
+                    There are <b>{{delete_info.marked}}</b> entries marked for deletion.
+                    <b>{{delete_info.delayed}}</b> of them are delayed.
+                    <button ng-click="empty_post(delete_info.trig_url)">Delete now</button>
+                </p>
             </div>
         </div>
     </body>

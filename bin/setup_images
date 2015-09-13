@@ -90,6 +90,8 @@ with db.transaction() as t:
         extra = {k: v for k, v in extra.items()}
         if 'backup' in extra:
             extra['backup'] = [b.strip() for b in extra['backup'].split(',') if b]
+        if 'tags' in extra:
+            extra['tags'] = [b.strip() for b in extra['tags'].split(',') if b]
 
         metadata = data=Location.DefaultLocationMetadata(extra)
         metadata.folder = path

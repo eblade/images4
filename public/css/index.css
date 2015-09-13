@@ -7,7 +7,6 @@ body {
   font-family: arial;
   margin-left: 0px;
   margin-right: 0px;
-  margin-top: 45px;
   margin-bottom: 0px;
 }
 a {
@@ -26,10 +25,9 @@ a {
 #proxy_holder {
   background-color: #555;
   padding: 0px;
-  height: 512px;
 }
 .proxy {
-  height: 500px;
+  height: 700px;
   margin-top: 5px;
   margin-bottom: 3px;
   margin-left: 6px;
@@ -74,46 +72,14 @@ a {
   width: 32px;
   height: 32px;
 }
-.top {
-  position: absolute;
-  top: 40px;
-  left: 5px;
-}
-.spacer {
-  height: 45px;
-  width: 100%;
-}
 .title {
   font-weight: bold;
   font-size: 16px;
-  position: fixed;
   top: 0px;
   left: 0px;
   padding-top: 5px;
   padding-left: 5px;
   width: 100%;
-  background-color: rgba(50, 50, 50, 0.50);
-}
-.viewtitle {
-  font-size: 30px;
-  position: fixed;
-  top: 0px;
-  left: 0px;
-  padding-left: 5px;
-}
-#grid {
-    margin-top: 100px;
-}
-.menu_thumb {
-    position: fixed;
-    top: 40px;
-    left: 10px;
-}
-.menu {
-    position: absolute;
-    top: 42px;
-    left: 5px;
-    width: 400px;
 }
 .tags {
     position: absolute;
@@ -220,6 +186,12 @@ input {
     text-transform: uppercase;
 }
 
+.keep {
+    font-weight: bold;
+    color: skyblue;
+    text-transform: uppercase;
+}
+
 .failed {
     font-weight: bold;
     color: red;
@@ -248,6 +220,11 @@ td {
     padding-left: 5px;
     padding-right: 5px;
     vertical-align: middle;
+}
+
+div.max200 {
+    width: 200px;
+    overflow-x: hidden;
 }
 
 .number {
