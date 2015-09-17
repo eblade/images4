@@ -39,12 +39,12 @@ class Location(Base):
         auto_user = Property(bool, default=False)
         user_id = Property()
         keep_original = Property(bool, default=False)
-        backup = Property(list)
         source = Property()
         hidden = Property(bool)
         access = Property(int)
         tags = Property(list)
         read_only = Property(bool)
+        wants = Property(list)  # FileDescriptor.Purpose
 
     id = Column(Integer, primary_key=True)
     type = Column(Integer, nullable=False)
@@ -57,11 +57,14 @@ IMPORTABLE = (
     Location.Type.drop_folder,
     Location.Type.upload,
     Location.Type.legacy,
-    Location.Type.mobile
+    Location.Type.mobile,
 )
 SCANNABLE = (
     Location.Type.drop_folder,
-    Location.Type.mobile
+    Location.Type.mobile,
+)
+EXPORTABLE = (
+    Location.Type.export,
 )
 
 
@@ -120,7 +123,35 @@ class ImportJob(Base):
     entry_id = Column(Integer, ForeignKey('entry.id'))
 
     user = relationship(User)
-    location = relationship(Location, backref=backref('import_jobs', lazy='dynamic'))
+    location = relationship(Location)
+
+
+class ExportJob(Base):
+    __tablename__ = 'export_job'
+
+    class State(IntEnum):
+        new = 0
+        active = 1
+        done = 2 
+        failed = 3
+
+    class DefaultExportJobMetadata(PropertySet):
+        path = Property()
+        want = Property(int)  # FileDescriptor.Purpose
+
+    id = Column(Integer, primary_key=True)
+    create_ts = Column(DateTime(timezone=True), default=func.now())
+    update_ts = Column(DateTime(timezone=True), onupdate=func.now())
+    deliver_ts = Column(DateTime(timezone=True))
+    state = Column(Integer, nullable=False, default=State.new)
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    location_id = Column(Integer, ForeignKey('location.id'), nullable=False)
+    entry_id = Column(Integer, ForeignKey('entry.id'))
+    data = Column(String(8192))
+
+    location = relationship(Location)
+    entry = relationship('Entry')
+    user = relationship(User)
 
 
 class Entry(Base):

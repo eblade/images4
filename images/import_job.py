@@ -1,6 +1,6 @@
 """Take care of import jobs and copying files. Keep track of import modules"""
 
-import logging, mimetypes, os, errno, re, base64
+import logging, mimetypes, os, re, base64
 from threading import Thread, Event
 from datetime import datetime, timedelta
 
@@ -59,7 +59,7 @@ def rest_trig_import(location_id):
 @no_guests()
 def rest_get_import_jobs():
     json = get_import_jobs().to_json()
-    logging.info("Import Job feed\n%s", json)
+    logging.debug("Import Job feed\n%s", json)
     return json
 
 
@@ -68,7 +68,7 @@ def rest_get_import_jobs():
 @no_guests()
 def rest_get_import_job_by_id(import_job_id):
     json = get_import_job_by_id(import_job_id).to_json()
-    logging.info("Import Job\n%s", json)
+    logging.debug("Import Job\n%s", json)
     return json
 
 
@@ -85,7 +85,7 @@ def rest_delete_import_job_by_id(import_job_id):
 @no_guests()
 def rest_reset_import_job(import_job_id):
     json = reset_import_job(import_job_id).to_json()
-    logging.info("Reset Import Job\n%s", json)
+    logging.debug("Reset Import Job\n%s", json)
     return json
 
 
@@ -94,9 +94,9 @@ def rest_reset_import_job(import_job_id):
 @no_guests()
 def rest_create_import_job():
     jd = ImportJobDescriptor(request.json)
-    logging.info("Incoming Import Job\n%s", jd.to_json())
+    logging.debug("Incoming Import Job\n%s", jd.to_json())
     json = create_import_job(jd).to_json()
-    logging.info("Created Import Job\n%s", json)
+    logging.debug("Created Import Job\n%s", json)
     rest_trig_import(jd.location.id)
     return json
 
@@ -251,75 +251,6 @@ class ImportJobDescriptorFeed(PropertySet):
 
 
 ################################################################################
-# Standard File Copyer Class
-
-
-class FileCopy(object):
-    def __init__(self, source, source_path, destination, dest_filename, link=False, keep_original=None, dest_folder=None):
-        self.source = source
-        if source and source.metadata and keep_original is None:
-            self.keep_original = source.metadata.keep_original
-        elif keep_original is None:
-            self.keep_original = True
-        else:
-            self.keep_original = keep_original
-        self.source_path = source_path
-        self.destination = destination
-        self.link = link
-        self.dest_filename = dest_filename
-        self.dest_folder = dest_folder
-        self.destination_rel_path = None
-        self.destination_full_path = None
-
-    def run(self):
-        if self.source:
-            src = os.path.join(self.source.get_root(), self.source_path)
-        else:
-            src = self.source_path
-        dst_folder = self.dest_folder or self.destination.suggest_folder()
-        dst = os.path.join(dst_folder, self.dest_filename)
-        try:
-            os.makedirs(dst_folder)
-        except FileExistsError as e:
-            pass
-        c = 0
-        while True:
-            try:
-                if c:
-                    postfix = '%i_' % c
-                    dst_path, dst_ext = os.path.splitext(dst)
-                    fixed_dst = ''.join([dst_path, '_%i' % c, dst_ext])
-                else:
-                    fixed_dst = dst
-                if self.link:
-                    logging.debug("Linking %s -> %s", src, fixed_dst)
-                    os.link(src, fixed_dst)
-                    self.destination_rel_path = os.path.relpath(fixed_dst, self.destination.get_root())
-                    self.destination_full_path = fixed_dst
-                else:
-                    import shutil
-                    logging.debug("Copying %s -> %s", src, fixed_dst)
-                    shutil.copyfile(src, fixed_dst)
-                    self.destination_rel_path = os.path.relpath(fixed_dst, self.destination.get_root())
-                    self.destination_full_path = fixed_dst
-                break
-            except FileExistsError:
-                c += 1
-            except OSError as e:
-                if e.errno == errno.EXDEV:
-                    logging.debug("Cross-device link %s -> %s", src, fixed_dst)
-                    self.link = False
-                else:
-                    logging.debug("OSError %i %s -> %s (%s)", e.errno, src, fixed_dst, str(e))
-                    raise e
-                    
-
-        if not self.keep_original:
-            logging.debug("Removing original %s", src)
-            os.remove(src)
-
-
-################################################################################
 # Internal Import API
 
 
@@ -415,13 +346,13 @@ def reset_import_job(import_job_id):
 
 
 def delete_old_import_jobs():
-    logging.info("Deleting old Import Jobs.")
+    logging.debug("Deleting old Import Jobs.")
     with get_db().transaction() as t:
         n = t.query(ImportJob).filter(
             ImportJob.state == ImportJob.State.done,
             ImportJob.update_ts < (datetime.utcnow()-timedelta(hours=1))
         ).delete(synchronize_session=False)
-        logging.info("Deleted %i old Import Jobs.", n)
+        logging.debug("Deleted %i old Import Jobs.", n)
         return n
 
 
@@ -441,7 +372,7 @@ def delete_import_job_by_id(import_job_id):
 
 class ImportManager(object):
     """
-    A Thread+Event based Import Manager that keeps one thread per folder
+    A Thread+Event based Import Manager that keeps one thread per location
     and trigs a new import round upon the trig method being called.
 
     There should only be one of these.
@@ -451,7 +382,7 @@ class ImportManager(object):
         rest_trig_import.manager = self
 
         for location in get_locations_by_type(*IMPORTABLE).entries:
-            logging.info("Setting up import thread [Importer%i].", location.id)
+            logging.debug("Setting up import thread [Importer%i].", location.id)
             event = Event()
             self.events[location.id] = event
             thread = Thread(
@@ -462,7 +393,7 @@ class ImportManager(object):
             thread.daemon = True
             thread.start()
 
-        logging.info("Setting up import job cleaning thread [ImportCleaner].")
+        logging.debug("Setting up import job cleaning thread [ImportCleaner].")
         event = Event()
         self.events['clean'] = event
         thread = Thread(

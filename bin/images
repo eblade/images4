@@ -23,7 +23,7 @@ logging.basicConfig(level=(logging.DEBUG if args.debug else logging.INFO), forma
 # Loading modules
 logging.info("Loading modules...")
 from images.database import init
-from images import api, scanner, location, entry, tag, user, import_job, image, delete
+from images import api, scanner, location, entry, tag, user, import_job, image, delete, export_job
 from images.user import authenticate, no_guests
 logging.info("Loading modules done.")
 
@@ -36,6 +36,7 @@ db = init(sql_path)
 # Setting up thread managers
 scanner_manager = scanner.ScannerManager()
 import_manager = import_job.ImportManager()
+#export_manager = export_job.ExportManager()
 delete_manager = delete.DeleteManager()
 
 

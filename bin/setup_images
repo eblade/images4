@@ -88,8 +88,8 @@ with db.transaction() as t:
         extra_name = 'Location:%s' % name
         extra = config[extra_name] if extra_name in config.sections() else {}
         extra = {k: v for k, v in extra.items()}
-        if 'backup' in extra:
-            extra['backup'] = [b.strip() for b in extra['backup'].split(',') if b]
+        if 'wants' in extra:
+            extra['wants'] = [b.strip() for b in extra['wants'].split(',') if b]
         if 'tags' in extra:
             extra['tags'] = [b.strip() for b in extra['tags'].split(',') if b]
 

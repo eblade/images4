@@ -413,6 +413,13 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
         11: 'legacy',
     };
 
+    $scope.purpose  ={
+        0: 'primary',
+        1: 'proxy',
+        2: 'thumb',
+        3: 'attachement',
+    };
+
     // Load resources
     $http.get('location')
         .success(function(data) {

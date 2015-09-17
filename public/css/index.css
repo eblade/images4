@@ -5,6 +5,7 @@ body {
   background-color: #222;
   color: #bbb;
   font-family: arial;
+  margin-top: 0px;
   margin-left: 0px;
   margin-right: 0px;
   margin-bottom: 0px;
@@ -77,39 +78,30 @@ a {
   font-size: 16px;
   top: 0px;
   left: 0px;
-  padding-top: 5px;
+  padding-top: 2px;
+  padding-bottom: 4px;
   padding-left: 5px;
   width: 100%;
 }
-.tags {
+.toolbox {
     position: absolute;
-    top: 49px;
+    top: 40px;
     left: 5px;
+    max-height: 480px;
+    overflow-y: scroll;
+    background-color: rgba(0, 0, 0, .5);
+    padding: 10px;
+}
+.tags {
     width: 300px;
     padding: 10px;
-    max-height: 480px;
-    overflow-y: scroll;
-    background-color: rgba(0, 0, 0, .5);
 }
 .metadata {
-    position: absolute;
-    top: 49px;
-    left: 5px;
     width: 500px;
-    max-height: 480px;
-    overflow-y: scroll;
-    padding: 10px;
-    background-color: rgba(0, 0, 0, .5);
 }
 .query {
     position: absolute;
-    top: 49px;
-    left: 5px;
     width: 300px;
-    max-height: 480px;
-    overflow-y: scroll;
-    padding: 10px;
-    background-color: rgba(0, 0, 0, .5);
 }
 .query_part {
     margin-bottom: 10px;

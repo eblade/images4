@@ -32,6 +32,7 @@
                         <th>Read Only</th>
                         <th>Auto Tag</th>
                         <th>Auto User</th>
+                        <th>Wants</th>
                         <th>Scan</th>
                         <th>Import</th>
                     </tr>
@@ -55,6 +56,7 @@
                         <td class="{{bool2str(location.metadata.auto_user)}}">
                             {{bool2str(location.metadata.auto_user)}}
                         </td>
+                        <td>{{purpose[location.metadata.wants]}}</td>
                         <td><button 
                                 ng-show="location.trig_scan_url"
                                 ng-click="empty_post(location.trig_scan_url)">Scan now</button>
@@ -80,6 +82,7 @@
                         <th>Updated</th>
                         <th>Message</th>
                         <th>Reset</th>
+                        <th>Delete</th>
                     </tr>
                     <tr ng-repeat="import_job in import_job_feed.entries">
                         <td class="number">{{import_job.id}}</td>
@@ -87,7 +90,9 @@
                         <td class="number">{{import_job.entry_id}}</td>
                         <td>{{import_job.path}}</td>
                         <td class="number">{{import_job.user_id}}</td>
-                        <td class="{{import_job_state[import_job.state]}}">{{import_job_state[import_job.state]}}</td>
+                        <td class="{{import_job_state[import_job.state]}}">
+                            {{import_job_state[import_job.state]}}
+                        </td>
                         <td>{{import_job.create_ts}}</td>
                         <td>{{import_job.update_ts}}</td>
                         <td>{{import_job.metadata.error}}</td>

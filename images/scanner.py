@@ -94,7 +94,7 @@ class ScannerManager(object):
         rest_trig_scan.manager = self
 
         for location in get_locations_by_type(*SCANNABLE).entries:
-            logging.info("Setting up scanner thread [Scanner%i]", location.id)
+            logging.debug("Setting up scanner thread [Scanner%i]", location.id)
             event = Event()
             self.events[location.id] = event
             thread = Thread(

@@ -24,7 +24,7 @@
                 <button ng-click="set_mode('upload')" />Upload</button>
                 {{me.id}} / {{me.name}} :: {{feed.offset + current + 1}} of {{feed.total_count}} :: {{message}}
             </div>
-            <div class="query" ng-show="query_mode()">
+            <div class="toolbox query" ng-show="query_mode()">
                 <div class="query_part">
                     <button ng-click="reset_query()">Reset</button>
                     <button ng-click="reload()">Update results</button></br>
@@ -136,7 +136,7 @@
                     <i>Enter</i> also updates.
                 </div>
             </div>
-            <div class="tags" ng-show="tags_mode()">
+            <div class="toolbox tags" ng-show="tags_mode()">
                 <div class="tag tag_{{have_tag(tag.id)}}"
                      style="background-color: {{tag.background_color}}; color: {{tag.foreground_color}};"
                      ng-repeat="tag in tag_feed.entries" 
@@ -150,10 +150,10 @@
                     ng-blur="enable_hk()"
                     ng-focus="disable_hk()"/>
             </div>
-            <div class="metadata" ng-show="metadata_mode()">
+            <div class="toolbox metadata" ng-show="metadata_mode()">
                 <i>No metadata</i>
             </div>
-            <div class="metadata" ng-show="debug_mode()">
+            <div class="toolbox metadata" ng-show="debug_mode()">
                 <h3>Feed data</h3>
                 <b>Offset</b>: {{feed.offset}}<br/>
                 <b>Current</b>: {{current}}<br/>
@@ -162,7 +162,7 @@
                 <b>Prev link</b>: {{feed.prev_link}}<br/>
                 <b>Next link</b>: {{feed.next_link}}<br/>
             </div>
-            <div class="metadata" ng-show="physical_mode()">
+            <div class="toolbox metadata" ng-show="physical_mode()">
                 <div class="warning" ng-show="current_is_deleted()">This entry will be deleted</div>
                 <div class="info" ng-show="current_is_hidden()">This entry is hidden</div>
                 <table>
@@ -207,7 +207,7 @@
                     </tr>
                 </table>
             </div>
-            <div class="metadata" ng-show="upload_mode()">
+            <div class="toolbox metadata" ng-show="upload_mode()">
                 <h3>File upload</h3>
                 <input type="file" image-upload/>
                 <br /><br />

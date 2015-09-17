@@ -6,7 +6,8 @@ import exifread
 from datetime import datetime
 
 from . import PROXY_SIZE, THUMB_SIZE, Entry, Location
-from .import_job import GenericImportModule, register_import_module, FileCopy
+from .import_job import GenericImportModule, register_import_module
+from .localfile import FileCopy
 from .entry import EntryDescriptor, FileDescriptor
 from .location import get_location_by_type
 from .exif import exif_position, exif_orientation, exif_string, exif_int, exif_ratio
