@@ -14,7 +14,6 @@ from .location import LocationDescriptor, get_locations_by_type, get_location_by
 from .entry import EntryDescriptor, create_entry
 
 
-
 ################################################################################
 # Export API
 
@@ -126,7 +125,7 @@ def register_export_module(protocol, module):
 
 
 def get_export_module(job_descriptor):
-    export_module = protocol_map.get(iob_descriptor.get_protocol(), None)
+    export_module = protocol_map.get(job_descriptor.get_protocol(), None)
     return export_module(job_descriptor) if export_module is not None else None
 
 
@@ -178,6 +177,7 @@ class ExportJobDescriptor(PropertySet):
             metadata = wrap_raw_json(export_job.data),
             user = User.map_in(export_job.user),
             location = LocationDescriptor.map_in(export_job.location),
+            entry = Entry.map_in(export_job.entry),
             state = ExportJob.State(export_job.state),
             create_ts = (export_job.create_ts.strftime('%Y-%m-%d %H:%M:%S')
                        if export_job.create_ts is not None else None),
@@ -185,7 +185,6 @@ class ExportJobDescriptor(PropertySet):
                        if export_job.update_ts is not None else None),
             deliver_ts = (export_job.deliver_ts.strftime('%Y-%m-%d %H:%M:%S')
                        if export_job.deliver_ts is not None else None),
-            entry = Entry.map_in(export_job.entry),
         )
         jd.calculate_urls()
         return jd
@@ -251,6 +250,7 @@ def create_export_job(jd): # ExportJobDescriptor
     
     jd = get_export_job_by_id(id)
     return jd
+
 
 def pick_up_export_job(location_id):
     with get_db().transaction() as t:
@@ -435,6 +435,7 @@ def exporting_loop(export_event, location):
             jd.entry_id = ed.id
             update_export_job_by_id(jd.id, jd)
             logging.info("Export Job Done %s", jd.path)
+
 
 def cleaning_loop(clean_event):
     """
