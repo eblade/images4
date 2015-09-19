@@ -23,7 +23,8 @@ logging.basicConfig(level=(logging.DEBUG if args.debug else logging.INFO), forma
 # Loading modules
 logging.info("Loading modules...")
 from images.database import init
-from images import api, scanner, location, entry, tag, user, import_job, image, delete, export_job
+from images import api, scanner, location, entry, tag, user, import_job, delete, export_job
+from images.ingest import image
 from images.user import authenticate, no_guests
 logging.info("Loading modules done.")
 
