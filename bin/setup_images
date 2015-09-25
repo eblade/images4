@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 
-import sys, os, logging, configparser
+import sys, os, logging
 from argparse import ArgumentParser
 
 import images
-from images.database import init, password_hash
-from images import Location, User, Tag
-
+from images.setup import Setup
 
 # Options
 parser = ArgumentParser(usage="setup_images")
@@ -19,112 +17,17 @@ parser.add_argument('-t', '--table-sql',
 
 
 args = parser.parse_args()
-config = configparser.ConfigParser()
-config.read(args.config)
-logging.basicConfig(level=(logging.DEBUG if args.debug else logging.INFO))
-sql_path = config['Database']['path']
 
-
-logging.debug("Config: %s", args.config)
-logging.debug("SQL Path: %s", sql_path)
-
-
-# Setting up the database
-logging.debug("Connecting to the Database...")
-db = init(sql_path)
-
+setup = Setup(args.config, debug=args.debug)
 
 if args.table_sql is not None:
     table = getattr(images, args.table_sql)
-    print(db.get_sql_for_table(table))
+    print(setup.db.get_sql_for_table(table))
     sys.exit(0)
 
-
-logging.info("Creating tables...")
-db.create_all()
-
-
-# Adding default users and groups
-logging.info("Setting up users...")
-with db.transaction() as t:
-    for username, data in config['User'].items():
-        logging.debug("There should be a user '%s'.", username)
-        
-        if t.query(User).filter(User.name==username).count() > 0:
-            logging.debug("User '%s' exists, skipping.", username)
-            continue
-
-        data = [d.strip() for d in data.split(',')]
-        assert len(data) == 3, "Userdata strings must be on format username = Fullname, Class, State"
-        fullname = data[0]
-        user_class = getattr(User.Class, data[1])
-        status = getattr(User.Status, data[2])
-
-        user_config = User.DefaultConfig()
-
-        user = User(
-            name=username,
-            fullname=fullname,
-            user_class=user_class,
-            status=status,
-            password=password_hash(username),
-            config=user_config.to_json(),
-        )
-        t.add(user)
-        logging.info("Added user '%s'.", username)
-logging.info("Done with users.")
-
-
-# Adding locations
-logging.info("Setting up locations...")
-with db.transaction() as t:
-    for name, path in config['Location'].items():
-        logging.debug("There should be a location '%s'.", name)
-
-        if t.query(Location).filter(Location.name==name).count() > 0:
-            logging.debug("Location '%s' exists, skipping.", name)
-            continue
-
-        extra_name = 'Location:%s' % name
-        extra = config[extra_name] if extra_name in config.sections() else {}
-        extra = {k: v for k, v in extra.items()}
-        if 'wants' in extra:
-            extra['wants'] = [b.strip() for b in extra['wants'].split(',') if b]
-        if 'tags' in extra:
-            extra['tags'] = [b.strip() for b in extra['tags'].split(',') if b]
-
-        metadata = data=Location.DefaultLocationMetadata(extra)
-        metadata.folder = path
-        type = extra.get('type', name)
-    
-        location = Location(
-            name=name,
-            type=getattr(Location.Type, type),
-            data=metadata.to_json(),
-        )
-        
-        t.add(location)
-        logging.info("Added location '%s'.", name)
-logging.info("Done with locations.")
-
-
-# Adding tags
-logging.info("Setting up tags...")
-with db.transaction() as t:
-    for name, color in config['Tag'].items():
-        logging.debug("There should be a tag '%s'.", name)
-
-        if t.query(Tag).filter(Tag.id==name).count() > 0:
-            logging.debug("Tag '%s' exists, skipping.", name)
-            continue
-
-        tag = Tag(
-            id=name,
-            color=int(color),
-        )
-        
-        t.add(tag)
-        logging.info("Added tag '%s'.", name)
-logging.info("Done with tags.")
+setup.create_database_tables()
+setup.add_users()
+setup.add_locations()
+setup.add_tags()
 
 logging.info("Done.")

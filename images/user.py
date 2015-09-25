@@ -1,6 +1,7 @@
 
 import logging, functools
 from bottle import Bottle, auth_basic, request, HTTPError
+from sqlalchemy.orm.exc import NoResultFound
 from enum import IntEnum, unique
 from .types import PropertySet, Property, strip
 from .database import get_db, password_hash
@@ -20,7 +21,8 @@ def authenticate(username, password):
     with get_db().transaction() as t:
         try:
             user = (t.query(User)
-                     .filter(User.name==username and User.password==password_hash(password))
+                     .filter(User.name==username)
+                     .filter(User.password==password_hash(password))
                      .one())
 
             request.user = UserDescriptor(
@@ -30,8 +32,9 @@ def authenticate(username, password):
                 fullname=user.fullname,
                 user_class=User.Class(user.user_class)
             )
+            logging.info("Logged in as %s", user.name)
             return True
-        except:
+        except NoResultFound:
             return False
 
 
