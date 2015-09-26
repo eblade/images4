@@ -29,6 +29,11 @@ from images.user import authenticate, no_guests
 logging.info("Loading modules done.")
 
 
+# Setting up the server
+server_host = config['Server']['host']
+server_port = int(config['Server']['port'])
+
+
 # Setting up the database
 sql_path = config['Database']['path']
 db = init(sql_path)
@@ -79,4 +84,4 @@ def get_css(file):
 
 
 debug(True)
-root_app.run(host='0.0.0.0')
+root_app.run(host=server_host, port=server_port)

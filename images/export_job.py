@@ -110,9 +110,9 @@ def get_reset_url(import_job_id):
     return '%s/job/%i/reset' % (BASE, import_job_id)
 
 
-api.url().import_job += get_job_url
-api.url().import_job += get_trig_url
-api.url().import_job += get_reset_url
+api.url().export_job += get_job_url
+api.url().export_job += get_trig_url
+api.url().export_job += get_reset_url
 
 
 ################################################################################
@@ -337,7 +337,7 @@ class ExportManager(object):
     """
     def __init__(self):
         self.events = {}
-        rest_trig_export.manager = self
+        rest_trig.manager = self
 
         for location in get_locations_by_type(*EXPORTABLE).entries:
             logging.debug("Setting up export thread [Exporter%i].", location.id)

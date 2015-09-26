@@ -9,6 +9,7 @@ body {
   margin-left: 0px;
   margin-right: 0px;
   margin-bottom: 0px;
+  overflow: hidden;
 }
 a {
   color: #ccc;
@@ -26,9 +27,10 @@ a {
 #proxy_holder {
   background-color: #555;
   padding: 0px;
+  width: 100%;
+  height: 100%;
 }
 .proxy {
-  height: 700px;
   margin-top: 5px;
   margin-bottom: 3px;
   margin-left: 6px;
@@ -45,7 +47,7 @@ a {
   border-right: 3px solid #aaa;
 }
 
-#entry_holder {
+#thumb_holder {
   background-color: #888;
   overflow-x: scroll;
 }
@@ -83,25 +85,11 @@ a {
   padding-left: 5px;
   width: 100%;
 }
+.toolbox_holder {
+    overflow-y: auto;
+}
 .toolbox {
-    position: absolute;
-    top: 40px;
-    left: 5px;
-    max-height: 480px;
-    overflow-y: scroll;
-    background-color: rgba(0, 0, 0, .5);
     padding: 10px;
-}
-.tags {
-    width: 300px;
-    padding: 10px;
-}
-.metadata {
-    width: 500px;
-}
-.query {
-    position: absolute;
-    width: 300px;
 }
 .query_part {
     margin-bottom: 10px;
@@ -111,6 +99,14 @@ a {
 }
 .tag_yes {
     filter: opacity(100%);
+}
+.thumb_tags {
+    position: relative;
+    top: -201px;
+    left: 2px;
+    width: 196px;
+    height: 196px;
+    overflow: hidden;
 }
 .tag {
     padding: 2px;
@@ -131,21 +127,6 @@ a {
     background-color: white;
     color: blue;
 }
-.form {
-    position: absolute;
-    left: 10px;
-    top: 130px;
-}
-.created_collection {
-    position: absolute;
-    left: 10px;
-    top: 70px;
-    padding: 10px;
-    background-color: #385;
-    color: white:
-    font-weight: bold;
-}
-
 p {
     margin: 5px;
 }
@@ -154,6 +135,8 @@ input {
     background-color: black;
     color: #aaa;
     border: 1px solid #555;
+    margin-top: 10px;
+    margin-bottom: 10px;
 }
 
 .warning {
@@ -202,6 +185,8 @@ input {
     text-transform: uppercase;
 }
 
+table.main {
+}
 th {
     text-align: left;
     padding-left: 5px;
@@ -216,7 +201,8 @@ td {
 
 div.max200 {
     width: 200px;
-    overflow-x: hidden;
+    height: 200px;
+    overflow: hidden;
 }
 
 .number {

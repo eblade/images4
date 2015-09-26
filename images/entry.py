@@ -131,7 +131,7 @@ class EntryDescriptor(PropertySet):
 
     @property
     def tags_as_string(self):
-        return ','.join([tag.lower() for tag in self.tags if tag])
+        return ','.join(sorted([("~%s~" % tag.lower()) for tag in self.tags if tag]))
 
     def calculate_urls(self):
         self.self_url = '%s/%i' % (BASE, self.id)
@@ -159,7 +159,7 @@ class EntryDescriptor(PropertySet):
             deleted=entry.delete_ts is not None,
             hidden=entry.hidden,
             files=[FileDescriptor.FromJSON(f) for f in entry.files.split('\n')] if entry.files else [],
-            tags=[tag for tag in entry.tags.split(',') if tag],
+            tags=sorted([tag.replace('~', '') for tag in entry.tags.split(',') if tag]),
             metadata=wrap_raw_json(entry.data),
             physical_metadata=wrap_raw_json(entry.physical_data),
         )
@@ -282,15 +282,19 @@ class EntryQuery(PropertySet):
 # Entry Internal BASE
 
 
-def get_entries(query=None):
+def get_entries(query=None, system=False):
     with get_db().transaction() as t:
         q = (t.query(Entry)
-              .filter((Entry.user_id == current_user_id()) | (Entry.access >= Entry.Access.public))
               .order_by(Entry.taken_ts.desc(), Entry.create_ts.desc())
         )
+        if not system:
+            q = q.filter(
+                  (Entry.user_id == current_user_id())
+                | (Entry.access >= Entry.Access.users)
+            )
 
-        if not current_is_user():
-            q = q.filter(Entry.access >= Entry.Access.users)
+            if not current_is_user():
+                q = q.filter(Entry.access >= Entry.Access.public)
 
         if query is not None:
             logging.info("Query: %s", query.to_json())
@@ -321,9 +325,9 @@ def get_entries(query=None):
                 q = q.filter(Entry.delete_ts != None)
 
             for tag in query.include_tags:
-                q = q.filter(Entry.tags.like('%' + tag + '%'))
+                q = q.filter(Entry.tags.like('%~' + tag + '~%'))
             for tag in query.exclude_tags:
-                q = q.filter(~Entry.tags.like('%' + tag + '%'))
+                q = q.filter(~Entry.tags.like('%~' + tag + '~%'))
 
             if query.source:
                 q = q.filter(Entry.source == query.source)
@@ -388,14 +392,14 @@ def get_entry_by_source(source, filename):
         return EntryDescriptor.map_in(entry) 
 
 
-def update_entry_by_id(id, ed):
+def update_entry_by_id(id, ed, system=False):
     with get_db().transaction() as t:
-        entry = (t.query(Entry)
-                  .filter(Entry.id==id,
-                         (Entry.user_id == current_user_id())
-                       | (Entry.access >= Entry.Access.common))
-                  .one())
-
+        q = t.query(Entry).filter(Entry.id==id)
+        if not system:
+            q = q.filter(
+                (Entry.user_id == current_user_id()) | (Entry.access >= Entry.Access.common)
+            )
+        entry = q.one()
         ed.map_out(entry)
 
     return get_entry_by_id(id)
@@ -416,6 +420,11 @@ def create_entry(ed, system=False):
     return get_entry_by_id(id)
 
 
-def delete_entry_by_id(id):
+def delete_entry_by_id(id, system=False):
     with get_db().transaction() as t:
-        t.query(Entry).filter(Entry.id==id).delete()
+        q = t.query(Entry).filter(Entry.id==id)
+        if not system:
+            q = q.filter(
+                (Entry.user_id == current_user_id()) | (Entry.access >= Entry.Access.common)
+            )
+        q.delete()

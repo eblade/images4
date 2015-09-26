@@ -23,6 +23,7 @@ def authenticate(username, password):
             user = (t.query(User)
                      .filter(User.name==username)
                      .filter(User.password==password_hash(password))
+                     .filter(User.status==User.Status.enabled)
                      .one())
 
             request.user = UserDescriptor(
@@ -32,7 +33,7 @@ def authenticate(username, password):
                 fullname=user.fullname,
                 user_class=User.Class(user.user_class)
             )
-            logging.info("Logged in as %s", user.name)
+            logging.debug("Logged in as %s", user.name)
             return True
         except NoResultFound:
             return False
@@ -73,7 +74,7 @@ def require_admin(realm="private"):
 
         @functools.wraps(func)
         def wrapper(*a, **ka):
-            if request.user.user_class != User.Class.admin:
+            if current_is_admin:
                 err = HTTPError(401, "Admin permission required")
                 err.add_header('WWW-Authenticate', 'Basic realm="%s"' % realm)
                 return err
@@ -106,6 +107,14 @@ def no_guests():
 
 def current_is_user():
     return request.user.user_class is not User.Class.guest 
+
+
+def current_is_admin():
+    return request.user.user_class is User.Class.admin 
+
+
+def current_is_guest():
+    return request.user.user_class is User.Class.guest 
 
 
 def require_user_id(user_id):

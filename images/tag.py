@@ -42,6 +42,13 @@ def rest_add_tag():
     return json
 
 
+@app.delete('/<id>')
+@auth_basic(authenticate)
+@no_guests()
+def rest_delete_tag_by_id(id):
+    logging.debug("Deleting Tag %s", id)
+    delete_tag_by_id(id)
+
 
 colors = [
     # Background Foreground Name
@@ -230,6 +237,11 @@ def get_tag_by_id(id):
             foreground_color=colors[tag.color][1],
             color_name=colors[tag.color][2],
         )
+
+
+def delete_tag_by_id(id):
+    with get_db().transaction() as t:
+        t.query(Tag).filter(Tag.id==id).delete()
 
 
 def add_tag(td):

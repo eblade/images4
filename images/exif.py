@@ -20,6 +20,7 @@ def exif_position(exif):
 
     lat = dms_to_float(lat)
     lon = dms_to_float(lon)
+    if None in (lat, lon): return None, None
 
     if exif.get('GPS GPSLatitudeRef').printable == 'S': lat *= -1
     if exif.get('GPS GPSLongitudeRef').printable == 'S': lon *= -1
@@ -29,14 +30,17 @@ def exif_position(exif):
 
 def dms_to_float(p):
     """Converts exifread data points to decimal GPX floats"""
-    degree = p.values[0]
-    minute = p.values[1]
-    second = p.values[2]
-    return (
-        float(degree.num)/float(degree.den) +
-        float(minute.num)/float(minute.den)/60 +
-        float(second.num)/float(second.den)/3600
-    )
+    try:
+        degree = p.values[0]
+        minute = p.values[1]
+        second = p.values[2]
+        return (
+            float(degree.num)/float(degree.den) +
+            float(minute.num)/float(minute.den)/60 +
+            float(second.num)/float(second.den)/3600
+        )
+    except AttributeError:
+        return None
 
 
 def exif_string(exif, key):
@@ -53,9 +57,13 @@ def exif_int(exif, key):
 
 def exif_ratio(exif, key):
     p = exif.get(key)
-    if p:
-        p = p.values[0]
-        return int(p.num), int(p.den)
+    try:
+        if p:
+            p = p.values[0]
+            return int(p.num), int(p.den)
+    except AttributeError:
+        if isinstance(p, int):
+            return p
 
 
 def exif_orientation(exif):

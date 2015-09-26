@@ -323,7 +323,7 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
         if (a === -1) {
             list.push(string);
         } else {
-            list.splice(a);
+            list.splice(a, 1);
         }
     };
 
@@ -358,6 +358,14 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
         }
         return tag.foreground_color;
     };
+
+    resize_proxy = function() {
+        $scope.window_height = window.innerHeight + 'px';
+        $scope.window_width = window.innerWidth + 'px';
+        $scope.proxy_height = (window.innerHeight - 275) + 'px';
+    };
+    window.onresize = resize_proxy;
+    resize_proxy();
 })
 
 

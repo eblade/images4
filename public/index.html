@@ -15,240 +15,268 @@
         <script src="js/images.js"></script>
     </head>
     <body>
-        <div ng-controller="Entry" ng-init="current = -1">
-            <div class="title">
-                <button ng-click="set_mode('query')" />Query</button>
-                <button ng-click="set_mode('tags')" />Tags</button>
-                <button ng-click="set_mode('metadata')" />Metadata</button>
-                <button ng-click="set_mode('physical')" />Physical</button>
-                <button ng-click="set_mode('upload')" />Upload</button>
-                {{me.id}} / {{me.name}} :: {{feed.offset + current + 1}} of {{feed.total_count}} :: {{message}}
-            </div>
-            <div class="toolbox query" ng-show="query_mode()">
-                <div class="query_part">
-                    <button ng-click="reset_query()">Reset</button>
-                    <button ng-click="reload()">Update results</button></br>
-                </div>
-                <div class="query_part">
-                    After 
-                    <input
-                        type="text"
-                        ng-model="q_start_ts"
-                        ng-blur="enable_hk()"
-                        ng-focus="disable_hk()"/>
-                </div>
-                <div class="query_part">
-                    Before 
-                    <input
-                        type="text"
-                        ng-model="q_end_ts"
-                        ng-blur="enable_hk()"
-                        ng-focus="disable_hk()"/>
-                </div>
-                <div class="query_part">
-                    Format like <i>YYYY-MM-DD</i>.
-                </div>
-                <div class="query_part">
-                    Source 
-                    <input
-                        type="text"
-                        ng-model="q_source"
-                        ng-blur="enable_hk()"
-                        ng-focus="disable_hk()"/>
-                </div>
-                <div class="query_part">
-                    Have these tags
-                    <div class="tag for_query  tag_{{list_have(tag.id, q_include_tags)}}"
-                         style="background-color: {{tag.background_color}}; color: {{tag.foreground_color}};"
-                         ng-repeat="tag in tag_feed.entries" 
-                         ng-click="list_toggle(tag.id, q_include_tags)">
-                        {{tag.id}}
+        <table 
+            class="main"
+            style="width: {{window_width}}; height: {{window_height}};"
+            ng-controller="Entry"
+            ng-init="current = -1">
+            <tr>
+                <td colspan="2">
+                    <div class="title">
+                        <button ng-click="set_mode('query')" />Query</button>
+                        <button ng-click="set_mode('tags')" />Tags</button>
+                        <button ng-click="set_mode('metadata')" />Metadata</button>
+                        <button ng-click="set_mode('physical')" />Physical</button>
+                        <button ng-click="set_mode('upload')" />Upload</button>
+                        {{me.id}} / {{me.name}} :: {{feed.offset + current + 1}} of {{feed.total_count}} :: {{message}}
                     </div>
-                </div>
-                <div class="query_part">
-                    Don not have these tags
-                    <div class="tag for_query tag_{{list_have(tag.id, q_exclude_tags)}}"
-                         style="background-color: {{tag.background_color}}; color: {{tag.foreground_color}};"
-                         ng-repeat="tag in tag_feed.entries" 
-                         ng-click="list_toggle(tag.id, q_exclude_tags)">
-                        {{tag.id}}
-                    </div>
-                </div>
-                <div class="query_part">
-                    <input
-                        type="checkbox"
-                        ng-model="q_image"
-                        ng-true-value="'yes'"
-                        ng-false-value="'no'"/>Image entries
-                </div>
-                <div class="query_part">
-                    <input
-                        type="checkbox"
-                        ng-model="q_video"
-                        ng-true-value="'yes'"
-                        ng-false-value="'no'"/>Video entries
-                </div>
-                <div class="query_part">
-                    <input
-                        type="checkbox"
-                        ng-model="q_audio"
-                        ng-true-value="'yes'"
-                        ng-false-value="'no'"/>Audio entries
-                </div>
-                <div class="query_part">
-                    <input
-                        type="checkbox"
-                        ng-model="q_other"
-                        ng-true-value="'yes'"
-                        ng-false-value="'no'"/>Other entries
-                </div>
-                <div class="query_part">
-                    <input
-                        type="checkbox"
-                        ng-model="q_show_hidden"
-                        ng-true-value="'yes'"
-                        ng-false-value="'no'"/>Show hidden entries
-                </div>
-                <div class="query_part">
-                    <input
-                        type="checkbox"
-                        ng-model="q_only_hidden"
-                        ng-true-value="'yes'"
-                        ng-false-value="'no'"/>Show only hidden entries
-                </div>
-                <div class="query_part">
-                    <input
-                        type="checkbox"
-                        ng-model="q_show_deleted"
-                        ng-true-value="'yes'"
-                        ng-false-value="'no'"/>Show deleted entries
-                </div>
-                <div class="query_part">
-                    <input
-                        type="checkbox"
-                        ng-model="q_only_deleted"
-                        ng-true-value="'yes'"
-                        ng-false-value="'no'"/>Show only deleted entries
-                </div>
-                <div class="query_part" style="text-align: right;">
-                    <button ng-click="reset_query()">Reset</button>
-                    <button ng-click="reload()">Update results</button></br>
-                    <i>Enter</i> also updates.
-                </div>
-            </div>
-            <div class="toolbox tags" ng-show="tags_mode()">
-                <div class="tag tag_{{have_tag(tag.id)}}"
-                     style="background-color: {{tag.background_color}}; color: {{tag.foreground_color}};"
-                     ng-repeat="tag in tag_feed.entries" 
-                     ng-click="toggle_tag(tag.id)">
-                    {{tag.id}}
-                </div>
-                <input
-                    style="width: 100%"
-                    ng-model="new_tag_id"
-                    ng-keypress="add_tag($event)"
-                    ng-blur="enable_hk()"
-                    ng-focus="disable_hk()"/>
-            </div>
-            <div class="toolbox metadata" ng-show="metadata_mode()">
-                <i>No metadata</i>
-            </div>
-            <div class="toolbox metadata" ng-show="debug_mode()">
-                <h3>Feed data</h3>
-                <b>Offset</b>: {{feed.offset}}<br/>
-                <b>Current</b>: {{current}}<br/>
-                <b>Total Count</b>: {{feed.total_count}}<br/>
-                <b>Page Count</b>: {{feed.count}}<br/>
-                <b>Prev link</b>: {{feed.prev_link}}<br/>
-                <b>Next link</b>: {{feed.next_link}}<br/>
-            </div>
-            <div class="toolbox metadata" ng-show="physical_mode()">
-                <div class="warning" ng-show="current_is_deleted()">This entry will be deleted</div>
-                <div class="info" ng-show="current_is_hidden()">This entry is hidden</div>
-                <table>
-                    <tr style="background-color: #999; color: white;">
-                        <td><b>Entry</b></td><td><i>{{get_current().id}}</i></td>
-                    </tr>
-                    <tr>
-                        <td>Source</td><td>{{get_current().source}}</td>
-                    </tr>
-                    <tr>
-                        <td>Original Filename</td><td>{{get_current().original_filename}}</td>
-                    </tr>
-                    <tr>
-                        <td>Export Filename</td><td>{{get_current().export_filname}}</td>
-                    </tr>
-                    <tr>
-                        <td>Taken</td><td>{{get_current().taken_ts}}</td>
-                    </tr>
-                    <tr>
-                        <td>Created</td><td>{{get_current().create_ts}}</td>
-                    </tr>
-                    <tr>
-                        <td>Updated</td><td>{{get_current().update_ts}}</td>
-                    </tr>
-                    <tr>
-                        <td>Delete</td><td class="warning">{{get_current().delete_ts}}</td>
-                    </tr>
-                    <tr>
-                        <td>Access</td><td>{{get_access_long(get_current())}}</td>
-                    </tr>
-                    <tr style="background-color: #999; color: white;">
-                        <td><b>Files</b></td><td></td>
-                    </tr>
-                    <tr ng-repeat="fd in get_current().files">
-                        <td><b>{{get_purpose(fd.purpose)}}</b></td><td>{{fd.location_id}}:/{{fd.path}} <i>{{fd.mime}}</i> {{fd.size}}b</td>
-                    </tr>
-                    <tr style="background-color: #999; color: white;">
-                        <td><b>Extracted data</b></td><td></td>
-                    </tr>
-                    <tr ng-repeat="(key, value) in get_current().physical_metadata">
-                        <td>{{key}}</td><td>{{value}}</td>
-                    </tr>
-                </table>
-            </div>
-            <div class="toolbox metadata" ng-show="upload_mode()">
-                <h3>File upload</h3>
-                <input type="file" image-upload/>
-                <br /><br />
-                <img ng-src="{{uploaded_image}}" width="100%" />
-                <button ng-click="show_from_source('web')">Show web uploads</button>
-            </div>
-            <div
-                id="proxy_holder"
-                ng-swipe-left="next()"
-                ng-swipe-right="previous()">
-                <center>
-                    <img
-                        class="proxy"
-                        ng-src="{{get_current_proxy_url()}}"/>
-                </center>
-            </div>
-            <div id="entry_holder">
-                <table>
-                    <tr>
-                        <td 
-                            class="thumbcell"
-                            ng-repeat="entry in feed.entries"
-                            scroll-if="$index == current">
-                            <div class="max200">
-                                <img 
-                                    ng-src="{{entry.thumb_url}}"
-                                    ng-click="view($index)"
-                                    class="thumb {{get_filters($index, entry)}}" />
-                                <div class="tag blue">{{entry.taken_ts}}</div>
-                                <div class="tag black">{{get_access(entry)}}{{entry.user_id}}</div>
-                                <div
-                                    class="tag"
-                                    style="background-color: {{tag_background_color(tag)}}; color: {{tag_foreground_color(tag)}};"
-                                    ng-repeat="tag in entry.tags">
-                                    {{tag}}
+                </td>
+            </tr>
+            <tr>
+                <td ng-if="!no_mode()">
+                    <div class="toolbox_holder" style="height: {{proxy_height}};">
+                        <div class="toolbox query" ng-show="query_mode()">
+                            <div class="query_part">
+                                <button ng-click="reset_query()">Reset</button>
+                                <button ng-click="reload()">Update results</button></br>
+                            </div>
+                            <div class="query_part">
+                                After 
+                                <input
+                                    type="text"
+                                    ng-model="q_start_ts"
+                                    ng-blur="enable_hk()"
+                                    ng-focus="disable_hk()"/>
+                            </div>
+                            <div class="query_part">
+                                Before 
+                                <input
+                                    type="text"
+                                    ng-model="q_end_ts"
+                                    ng-blur="enable_hk()"
+                                    ng-focus="disable_hk()"/>
+                            </div>
+                            <div class="query_part">
+                                Format like <i>YYYY-MM-DD</i>.
+                            </div>
+                            <div class="query_part">
+                                Source 
+                                <input
+                                    type="text"
+                                    ng-model="q_source"
+                                    ng-blur="enable_hk()"
+                                    ng-focus="disable_hk()"/>
+                            </div>
+                            <div class="query_part">
+                                Have these tags
+                                <div class="tag for_query tag_{{list_have(tag.id, q_include_tags)}}"
+                                     style="background-color: {{tag.background_color}}; color: {{tag.foreground_color}};"
+                                     ng-repeat="tag in tag_feed.entries" 
+                                     ng-click="list_toggle(tag.id, q_include_tags)">
+                                    {{tag.id}}
                                 </div>
-                           </div>
-                        </td>
-                    </tr>
-                <table>
-            </div>
-        </div>
+                            </div>
+                            <div class="query_part">
+                                Does not have these tags
+                                <div class="tag for_query tag_{{list_have(tag.id, q_exclude_tags)}}"
+                                     style="background-color: {{tag.background_color}}; color: {{tag.foreground_color}};"
+                                     ng-repeat="tag in tag_feed.entries" 
+                                     ng-click="list_toggle(tag.id, q_exclude_tags)">
+                                    {{tag.id}}
+                                </div>
+                            </div>
+                            <div class="query_part">
+                                <input
+                                    type="checkbox"
+                                    ng-model="q_image"
+                                    ng-true-value="'yes'"
+                                    ng-false-value="'no'"/>Image entries
+                            </div>
+                            <div class="query_part">
+                                <input
+                                    type="checkbox"
+                                    ng-model="q_video"
+                                    ng-true-value="'yes'"
+                                    ng-false-value="'no'"/>Video entries
+                            </div>
+                            <div class="query_part">
+                                <input
+                                    type="checkbox"
+                                    ng-model="q_audio"
+                                    ng-true-value="'yes'"
+                                    ng-false-value="'no'"/>Audio entries
+                            </div>
+                            <div class="query_part">
+                                <input
+                                    type="checkbox"
+                                    ng-model="q_other"
+                                    ng-true-value="'yes'"
+                                    ng-false-value="'no'"/>Other entries
+                            </div>
+                            <div class="query_part">
+                                <input
+                                    type="checkbox"
+                                    ng-model="q_show_hidden"
+                                    ng-true-value="'yes'"
+                                    ng-false-value="'no'"/>Show hidden entries
+                            </div>
+                            <div class="query_part">
+                                <input
+                                    type="checkbox"
+                                    ng-model="q_only_hidden"
+                                    ng-true-value="'yes'"
+                                    ng-false-value="'no'"/>Show only hidden entries
+                            </div>
+                            <div class="query_part">
+                                <input
+                                    type="checkbox"
+                                    ng-model="q_show_deleted"
+                                    ng-true-value="'yes'"
+                                    ng-false-value="'no'"/>Show deleted entries
+                            </div>
+                            <div class="query_part">
+                                <input
+                                    type="checkbox"
+                                    ng-model="q_only_deleted"
+                                    ng-true-value="'yes'"
+                                    ng-false-value="'no'"/>Show only deleted entries
+                            </div>
+                            <div class="query_part" style="text-align: right;">
+                                <button ng-click="reset_query()">Reset</button>
+                                <button ng-click="reload()">Update results</button></br>
+                                <i>Enter</i> also updates.
+                            </div>
+                        </div>
+                        <div class="toolbox tags" ng-show="tags_mode()">
+                            <div class="tag for_query tag_{{have_tag(tag.id)}}"
+                                 style="background-color: {{tag.background_color}}; color: {{tag.foreground_color}};"
+                                 ng-repeat="tag in tag_feed.entries" 
+                                 ng-click="toggle_tag(tag.id)">
+                                {{tag.id}}
+                            </div>
+                            <input
+                                style="width: 100%"
+                                ng-model="new_tag_id"
+                                ng-keypress="add_tag($event)"
+                                ng-blur="enable_hk()"
+                                ng-focus="disable_hk()"/>
+                        </div>
+                        <div class="toolbox metadata" ng-show="metadata_mode()">
+                            <i>No metadata</i>
+                        </div>
+                        <div class="toolbox metadata" ng-show="debug_mode()">
+                            <h3>Feed data</h3>
+                            <b>Offset</b>: {{feed.offset}}<br/>
+                            <b>Current</b>: {{current}}<br/>
+                            <b>Total Count</b>: {{feed.total_count}}<br/>
+                            <b>Page Count</b>: {{feed.count}}<br/>
+                            <b>Prev link</b>: {{feed.prev_link}}<br/>
+                            <b>Next link</b>: {{feed.next_link}}<br/>
+                        </div>
+                        <div class="toolbox metadata" ng-show="physical_mode()">
+                            <div class="warning" ng-show="current_is_deleted()">This entry will be deleted</div>
+                            <div class="info" ng-show="current_is_hidden()">This entry is hidden</div>
+                            <table>
+                                <tr style="background-color: #999; color: white;">
+                                    <td><b>Entry</b></td><td><i>{{get_current().id}}</i></td>
+                                </tr>
+                                <tr>
+                                    <td>Source</td><td>{{get_current().source}}</td>
+                                </tr>
+                                <tr>
+                                    <td>Original Filename</td><td>{{get_current().original_filename}}</td>
+                                </tr>
+                                <tr>
+                                    <td>Export Filename</td><td>{{get_current().export_filname}}</td>
+                                </tr>
+                                <tr>
+                                    <td>Taken</td><td>{{get_current().taken_ts}}</td>
+                                </tr>
+                                <tr>
+                                    <td>Created</td><td>{{get_current().create_ts}}</td>
+                                </tr>
+                                <tr>
+                                    <td>Updated</td><td>{{get_current().update_ts}}</td>
+                                </tr>
+                                <tr>
+                                    <td>Delete</td><td class="warning">{{get_current().delete_ts}}</td>
+                                </tr>
+                                <tr>
+                                    <td>Access</td><td>{{get_access_long(get_current())}}</td>
+                                </tr>
+                                <tr style="background-color: #999; color: white;">
+                                    <td><b>Files</b></td><td></td>
+                                </tr>
+                                <tr ng-repeat="fd in get_current().files">
+                                    <td><b>{{get_purpose(fd.purpose)}}</b></td>
+                                    <td>{{fd.location_id}}:/{{fd.path}} <i>{{fd.mime}}</i> {{fd.size}}b</td>
+                                </tr>
+                                <tr style="background-color: #999; color: white;">
+                                    <td><b>Extracted data</b></td><td></td>
+                                </tr>
+                                <tr ng-repeat="(key, value) in get_current().physical_metadata">
+                                    <td>{{key}}</td><td>{{value}}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="toolbox metadata" ng-show="upload_mode()">
+                            <h3>File upload</h3>
+                            <input type="file" image-upload/>
+                            <br /><br />
+                            <img ng-src="{{uploaded_image}}" width="100%" />
+                            <button ng-click="show_from_source('web')">Show web uploads</button>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div
+                        id="proxy_holder"
+                        ng-swipe-left="next()"
+                        ng-swipe-right="previous()">
+                        <center>
+                            <img
+                                class="proxy"
+                                style="height: {{proxy_height}};"
+                                ng-src="{{get_current_proxy_url()}}"/>
+                        </center>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    <div 
+                        id="thumb_holder"
+                        style="max-width: {{window_width}};">
+                        <table>
+                            <tr>
+                                <td 
+                                    class="thumbcell"
+                                    ng-repeat="entry in feed.entries"
+                                    scroll-if="$index == current">
+                                    <div class="max200">
+                                        <img 
+                                            ng-src="{{entry.thumb_url}}"
+                                            ng-click="view($index)"
+                                            class="thumb {{get_filters($index, entry)}}" />
+                                        <div 
+                                            ng-click="view($index)"
+                                            class="thumb_tags">
+                                            <div class="tag blue">{{entry.taken_ts}}</div>
+                                            <div class="tag black">{{get_access(entry)}}{{entry.user_id}}</div>
+                                            <div
+                                                class="tag"
+                                                style="background-color: {{tag_background_color(tag)}}; color: {{tag_foreground_color(tag)}};"
+                                                ng-repeat="tag in entry.tags">
+                                                {{tag}}
+                                            </div>
+                                        </div>
+                                   </div>
+                                </td>
+                            </tr>
+                        <table>
+                    </div>
+                </td>
+            </tr>
+        </table>    
     </body>
 </html>
