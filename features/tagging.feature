@@ -32,36 +32,31 @@ Feature: Tagging
 
   @tags @entries
   Scenario: Adding one new tag to a blank entry
-     Given a new entry called e
+     Given an entry called e
       When the tag "new.tag5" is added to the entry e
-       And the entry e is updated
       Then the entry e should have the tag "new.tag5"
 
   @tags @entries
   Scenario: Adding one existing tag to a blank entry
-     Given a new entry called e
+     Given an entry called e
       When the tag "new.tag5" is added to the entry e
-       And the entry e is updated
       Then the entry e should have the tag "new.tag5"
 
   @tags @entries
   Scenario: Adding two tags to a blank entry
-     Given a new entry called e
+     Given an entry called e
       When the tag "new.tag5" is added to the entry e
        And the tag "new.tag6" is added to the entry e
-       And the entry e is updated
       Then the entry e should have the tag "new.tag5"
        And the entry e should have the tag "new.tag6"
 
   @tags @entries
-  Scenario: Adding two tags to a two blank entries
-     Given a new entry called e1
-       And a new entry called e2
+  Scenario: Adding two tags to two blank entries
+     Given an entry called e1
+       And an entry called e2
       When the tag "only1" is added to the entry e1
       When the tag "both" is added to the entry e1
        And the tag "both" is added to the entry e2
-       And the entry e1 is updated
-       And the entry e2 is updated
       Then the entry e1 should have the tag "only1"
        And the entry e1 should have the tag "both"
        And the entry e2 should not have the tag "only1"
@@ -69,14 +64,22 @@ Feature: Tagging
 
   @tags @entries
   Scenario: Adding two similar tags to different entries
-     Given a new entry called e1
-       And a new entry called e2
-       And a new entry called e3
+     Given an entry called e1
+       And an entry called e2
+       And an entry called e3
       When the tag "longer.tag" is added to the entry e1
        And the tag "longer.tag" is added to the entry e2
        And the tag "tag" is added to the entry e3
-       And the entry e1 is updated
-       And the entry e2 is updated
-       And the entry e3 is updated
       Then a search for the tag "longer.tag" should give 2 hits
        And a search for the tag "tag" should give 1 hit
+
+  @tags @entries
+  Scenario: Removing a tag from an entry
+     Given an entry called e
+       And the entry e has the tag "bad tag"
+       And the entry e has the tag "good tag"
+      When the tag "bad tag" is removed from the entry e
+      Then the entry e should not have the tag "bad tag"
+       And the entry e should have the tag "good tag"
+       And a search for the tag "good tag" should give 1 hit
+       And a search for the tag "bad tag" should give 0 hits

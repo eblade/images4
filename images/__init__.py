@@ -18,18 +18,18 @@ class Location(Base):
     __tablename__ = 'location'
 
     class Type(IntEnum):
-        drop_folder = 0
-        image = 1
-        video = 2 
-        audio = 3
-        other = 4
-        proxy = 5
-        thumb = 6
-        upload = 7
-        export = 8
-        archive = 9
-        mobile = 10
-        legacy = 11
+        drop_folder = 0  # Import location that is scanned
+        image = 1        # Storage location for original high resolution image
+        video = 2        # Storage location for original high resolution video
+        audio = 3        # Storage location for original high resolution audio
+        other = 4        # Storage location for other original files
+        proxy = 5        # Storage location for low resolution proxy copy
+        thumb = 6        # Storage location for thumbnail image
+        upload = 7       # Import location for web upload which is not scanned
+        export = 8       # Export location "fire and forget"
+        archive = 9      # Export location where copies are remembered as remote copies
+        mobile = 10      # Storage location synced with external device, scanned and imported
+        legacy = 11      # Storage location that can be imported
 
     class DefaultLocationMetadata(PropertySet):
         server = Property()
@@ -37,7 +37,7 @@ class Location(Base):
         subfolder = Property(default='{date}')
         auto_tag = Property(bool, default=False)
         auto_user = Property(bool, default=False)
-        user_id = Property()
+        user_id = Property(int)
         keep_original = Property(bool, default=False)
         source = Property()
         hidden = Property(bool)

@@ -95,6 +95,11 @@ class LocationDescriptor(PropertySet):
         ld.calculate_urls()
         return ld
 
+    def map_out(self, location):
+       location.name = self.name
+       location.type = self.type
+       location.data = self.metadata.to_json() if self.metadata is not None else None
+
 
 class LocationDescriptorFeed(PropertySet):
     count = Property(int)
@@ -137,3 +142,19 @@ def get_locations():
 
 def delete_file_on_location(location, path):
     os.remove(os.path.join(location.metadata.folder, path))
+
+
+def create_location(ld):
+    with get_db().transaction() as t:
+        location = Location()
+
+        ld.map_out(location)
+        t.add(location)
+        t.commit()
+        id = location.id
+
+    return get_location_by_id(id)
+
+def delete_location_by_id(id):
+    with get_db().transaction() as t:
+        q = t.query(Location).filter(Location.id==id).delete()
