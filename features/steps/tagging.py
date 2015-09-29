@@ -2,7 +2,7 @@ import logging
 from behave import *
 
 from images.tag import TagDescriptor, add_tag, ensure_tag, get_tag_by_id
-from images.entry import EntryQuery, get_entries, update_entry_by_id
+from images.entry import EntryQuery, get_entries, update_entry_by_id, get_entry_by_source
 
 @given('a tag name "{tag_name}"')
 def step_impl(context, tag_name):
@@ -19,18 +19,15 @@ def step_impl(context):
 @given('the tag is already added')
 def step_impl(context):
     add_tag(TagDescriptor(id=context.tag_name, color_id=context.color_number))
-    context.tags_.append(context.tag_name)
 
 
 @when('the new tag is added')
 def step_impl(context):
     add_tag(TagDescriptor(id=context.tag_name, color_id=context.color_number))
-    context.tags_.append(context.tag_name)
 
 @when('the tag is ensured')
 def step_impl(context):
     ensure_tag(context.tag_name)
-    if context.tag_name not in context.tags_: context.tags_.append(context.tag_name)
 
 @then('the tag should be there')
 def step_impl(context):
@@ -51,25 +48,25 @@ def step_impl(context):
 @given('the entry {entry_name} has the tag "{tag_name}"')
 @when('the tag "{tag_name}" is added to the entry {entry_name}')
 def step_impl(context, tag_name, entry_name):
-    ed = context.entries[entry_name]
+    ed = get_entry_by_source('test', entry_name, system=True)
     ed.tags.append(tag_name)
-    context.entries[entry_name] = update_entry_by_id(ed.id, ed, system=True)
+    update_entry_by_id(ed.id, ed, system=True)
 
 @when('the tag "{tag_name}" is removed from the entry {entry_name}')
 def step_impl(context, tag_name, entry_name):
-    ed = context.entries[entry_name]
+    ed = get_entry_by_source('test', entry_name, system=True)
     ed.tags.remove(tag_name)
-    context.entries[entry_name] = update_entry_by_id(ed.id, ed, system=True)
+    update_entry_by_id(ed.id, ed, system=True)
 
 
 @then('the entry {entry_name} should have the tag "{tag_name}"')
 def step_impl(context, entry_name, tag_name):
-    ed = context.entries[entry_name]
+    ed = get_entry_by_source('test', entry_name, system=True)
     assert tag_name in ed.tags
 
 @then('the entry {entry_name} should not have the tag "{tag_name}"')
 def step_impl(context, entry_name, tag_name):
-    ed = context.entries[entry_name]
+    ed = get_entry_by_source('test', entry_name, system=True)
     assert not tag_name in ed.tags
 
 @then('a search for the tag "{tag_name}" should give {hits} hit')

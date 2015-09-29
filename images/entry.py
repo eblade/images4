@@ -382,13 +382,16 @@ def get_entry_by_id(id):
         return EntryDescriptor.map_in(entry) 
 
 
-def get_entry_by_source(source, filename):
+def get_entry_by_source(source, filename, system=False):
     with get_db().transaction() as t:
-        entry = t.query(Entry).filter(
+        q = t.query(Entry).filter(
             Entry.source == source,
-            Entry.filename == filename,
-            (Entry.user_id == current_user_id()) | (Entry.access >= Entry.Access.public)
-        ).one()
+            Entry.original_filename == filename
+        )
+        if not system:
+            q = q.filter((Entry.user_id == current_user_id()) 
+                       | (Entry.access >= Entry.Access.public))
+        entry = q.one()
         return EntryDescriptor.map_in(entry) 
 
 

@@ -1,5 +1,8 @@
 Feature: User accounts
 
+  Background:
+     Given a system specified by "default.ini"
+
   Scenario: A valid normal user authenticates
      Given the username is "user"
        And the password is "user"

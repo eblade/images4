@@ -7,7 +7,7 @@ from . import Location, User, Tag
 class Setup:
     def __init__(self, config_path, debug=False):
         self.setup_logging(debug=debug)
-        logging.debug("Config: %s", config_path)
+        logging.info("Config: %s", config_path)
         self.config = configparser.ConfigParser()
         self.config.read(config_path)
 

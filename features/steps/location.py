@@ -5,7 +5,7 @@ from images import Location, Entry
 from images.location import LocationDescriptor, create_location, get_locations_by_type
 
 
-@given('a specific set of location data')
+@given('a specific set of locations')
 def step_impl(context):
     for row in context.table:
         md = Location.DefaultLocationMetadata(
@@ -19,7 +19,7 @@ def step_impl(context):
             type = getattr(Location.Type, row['type']),
             metadata = md,
         )
-        context.locations.append(create_location(ld))
+        create_location(ld)
 
 @then(u'there should be a "{type}" location named "{name}"')
 def step_impl(context, type, name):
