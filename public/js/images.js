@@ -141,14 +141,16 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
     // Tags API
     $scope.add_tag = function(event) {
         if (event.keyCode != 13) return;
+        $scope.new_tag_id = document.getElementById("new_tag_id").value;
+        if (!$scope.new_tag_id) { alert("Tag can't be empty!"); return; };
         var tag = new Object();
         tag.id = $scope.new_tag_id;
         tag.color_id = $scope.new_tag_color_id;
-        $scope.new_tag_id = "";
         $http.post('tag', tag)
             .success(function(tag) {
                 $scope.tag_feed.entries.push(tag);
                 $scope.tag_by_id[tag.id] = tag;
+                $scope.new_tag_id = "";
             });
     };
 

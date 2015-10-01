@@ -245,6 +245,8 @@ def delete_tag_by_id(id):
 
 
 def add_tag(td):
+    if not td.id:
+        raise ValueError("Tag id must not be empty")
 
     with get_db().transaction() as t:
         tag = Tag()
@@ -261,6 +263,9 @@ def ensure_tag(tag_id):
     """
     Check if a tag with id `tag_id` exists. If not, create it.
     """
+    if not td.id:
+        raise ValueError("Tag id must not be empty")
+
     with get_db().transaction() as t:
         try:
             t.query(Tag).filter(Tag.id == tag_id).one()
