@@ -19,7 +19,7 @@
         ng-init="current = -1">
         <table 
             class="main"
-            style="width: {{window_width}}; height: {{window_height}};"
+            style="width: {{window_width}}; height: {{window_height}};">
             <tr>
                 <td colspan="2">
                     <div class="title">
@@ -44,7 +44,7 @@
                                 After 
                                 <input
                                     type="text"
-                                    ng-model="q_start_ts"
+                                    ng-model="q.start_ts"
                                     ng-blur="enable_hk()"
                                     ng-focus="disable_hk()"/>
                             </div>
@@ -52,7 +52,7 @@
                                 Before 
                                 <input
                                     type="text"
-                                    ng-model="q_end_ts"
+                                    ng-model="q.end_ts"
                                     ng-blur="enable_hk()"
                                     ng-focus="disable_hk()"/>
                             </div>
@@ -63,81 +63,81 @@
                                 Source 
                                 <input
                                     type="text"
-                                    ng-model="q_source"
+                                    ng-model="q.source"
                                     ng-blur="enable_hk()"
                                     ng-focus="disable_hk()"/>
                             </div>
                             <div class="query_part">
                                 Have these tags
-                                <div class="tag for_query tag_{{list_have(tag.id, q_include_tags)}}"
+                                <div class="tag for_query tag_{{list_have(tag.id, q.include_tags)}}"
                                      style="background-color: {{tag.background_color}}; color: {{tag.foreground_color}};"
                                      ng-repeat="tag in tag_feed.entries" 
-                                     ng-click="list_toggle(tag.id, q_include_tags)">
+                                     ng-click="list_toggle(tag.id, q.include_tags)">
                                     {{tag.id}}
                                 </div>
                             </div>
                             <div class="query_part">
                                 Does not have these tags
-                                <div class="tag for_query tag_{{list_have(tag.id, q_exclude_tags)}}"
+                                <div class="tag for_query tag_{{list_have(tag.id, q.exclude_tags)}}"
                                      style="background-color: {{tag.background_color}}; color: {{tag.foreground_color}};"
                                      ng-repeat="tag in tag_feed.entries" 
-                                     ng-click="list_toggle(tag.id, q_exclude_tags)">
+                                     ng-click="list_toggle(tag.id, q.exclude_tags)">
                                     {{tag.id}}
                                 </div>
                             </div>
                             <div class="query_part">
                                 <input
                                     type="checkbox"
-                                    ng-model="q_image"
+                                    ng-model="q.image"
                                     ng-true-value="'yes'"
                                     ng-false-value="'no'"/>Image entries
                             </div>
                             <div class="query_part">
                                 <input
                                     type="checkbox"
-                                    ng-model="q_video"
+                                    ng-model="q.video"
                                     ng-true-value="'yes'"
                                     ng-false-value="'no'"/>Video entries
                             </div>
                             <div class="query_part">
                                 <input
                                     type="checkbox"
-                                    ng-model="q_audio"
+                                    ng-model="q.audio"
                                     ng-true-value="'yes'"
                                     ng-false-value="'no'"/>Audio entries
                             </div>
                             <div class="query_part">
                                 <input
                                     type="checkbox"
-                                    ng-model="q_other"
+                                    ng-model="q.other"
                                     ng-true-value="'yes'"
                                     ng-false-value="'no'"/>Other entries
                             </div>
                             <div class="query_part">
                                 <input
                                     type="checkbox"
-                                    ng-model="q_show_hidden"
+                                    ng-model="q.show_hidden"
                                     ng-true-value="'yes'"
                                     ng-false-value="'no'"/>Show hidden entries
                             </div>
                             <div class="query_part">
                                 <input
                                     type="checkbox"
-                                    ng-model="q_only_hidden"
+                                    ng-model="q.only_hidden"
                                     ng-true-value="'yes'"
                                     ng-false-value="'no'"/>Show only hidden entries
                             </div>
                             <div class="query_part">
                                 <input
                                     type="checkbox"
-                                    ng-model="q_show_deleted"
+                                    ng-model="q.show_deleted"
                                     ng-true-value="'yes'"
                                     ng-false-value="'no'"/>Show deleted entries
                             </div>
                             <div class="query_part">
                                 <input
                                     type="checkbox"
-                                    ng-model="q_only_deleted"
+                                    ng-model="q.only_deleted"
                                     ng-true-value="'yes'"
                                     ng-false-value="'no'"/>Show only deleted entries
                             </div>

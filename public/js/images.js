@@ -10,21 +10,22 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
     $scope.tag_by_id = new Object();
     $scope.tag_feed = new Object();
     $scope.feed = new Array();
+    $scope.q = new Object(); // Query object
     
     $scope.reset_query = function () {
-        $scope.q_start_ts = '';
-        $scope.q_end_ts = '';
-        $scope.q_image = 'yes';
-        $scope.q_video = 'no';
-        $scope.q_audio = 'no';
-        $scope.q_other = 'no';
-        $scope.q_show_hidden = 'no';
-        $scope.q_only_hidden = 'no';
-        $scope.q_show_deleted = 'no';
-        $scope.q_only_deleted = 'no';
-        $scope.q_include_tags = Array();
-        $scope.q_exclude_tags = Array();
-        $scope.q_source = '';
+        $scope.q.start_ts = '';
+        $scope.q.end_ts = '';
+        $scope.q.image = 'yes';
+        $scope.q.video = 'no';
+        $scope.q.audio = 'no';
+        $scope.q.other = 'no';
+        $scope.q.show_hidden = 'no';
+        $scope.q.only_hidden = 'no';
+        $scope.q.show_deleted = 'no';
+        $scope.q.only_deleted = 'no';
+        $scope.q.include_tags = Array();
+        $scope.q.exclude_tags = Array();
+        $scope.q.source = '';
     };
 
     $scope.hk = true;
@@ -92,19 +93,19 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
     $scope.reload = function() {
         $http.get('entry', {
             params: {
-                start_ts: $scope.q_start_ts,
-                end_ts: $scope.q_end_ts,
-                image: $scope.q_image,
-                video: $scope.q_video,
-                audio: $scope.q_audio,
-                other: $scope.q_other,
-                show_hidden: $scope.q_show_hidden,
-                only_hidden: $scope.q_only_hidden,
-                show_deleted: $scope.q_show_deleted,
-                only_deleted: $scope.q_only_deleted,
-                include_tags: $scope.q_include_tags.join(),
-                exclude_tags: $scope.q_exclude_tags.join(),
-                source: $scope.q_source,
+                start_ts: $scope.q.start_ts,
+                end_ts: $scope.q.end_ts,
+                image: $scope.q.image,
+                video: $scope.q.video,
+                audio: $scope.q.audio,
+                other: $scope.q.other,
+                show_hidden: $scope.q.show_hidden,
+                only_hidden: $scope.q.only_hidden,
+                show_deleted: $scope.q.show_deleted,
+                only_deleted: $scope.q.only_deleted,
+                include_tags: $scope.q.include_tags.join(),
+                exclude_tags: $scope.q.exclude_tags.join(),
+                source: $scope.q.source,
             }
         })
             .success(function(data) {
