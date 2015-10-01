@@ -47,3 +47,6 @@ Feature: User accounts
       When the user tries to log in
       Then the login should fail
        And there should not be a session
+
+  Scenario: No-one has logged in
+      Then there should not be a session
