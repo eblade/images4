@@ -1,5 +1,6 @@
 import logging
 from behave import *
+from hamcrest import *
 
 from images.tag import TagDescriptor, add_tag, ensure_tag, get_tag_by_id
 from images.entry import EntryQuery, get_entries, update_entry_by_id, get_entry_by_source
@@ -36,11 +37,11 @@ def step_impl(context):
 
 @then('the color should be as specified')
 def step_impl(context):
-    assert get_tag_by_id(context.tag_name).color_id == context.color_number
+    assert_that(get_tag_by_id(context.tag_name).color_id, equal_to(context.color_number))
 
 @then('the color should be set')
 def step_impl(context):
-    assert get_tag_by_id(context.tag_name).color_id is not None
+    assert_that(get_tag_by_id(context.tag_name).color_id, is_not(None))
 
 
 # Tagging Entries
@@ -62,17 +63,16 @@ def step_impl(context, tag_name, entry_name):
 @then('the entry {entry_name} should have the tag "{tag_name}"')
 def step_impl(context, entry_name, tag_name):
     ed = get_entry_by_source('test', entry_name, system=True)
-    assert tag_name in ed.tags
+    assert_that(tag_name, is_in(ed.tags))
 
 @then('the entry {entry_name} should not have the tag "{tag_name}"')
 def step_impl(context, entry_name, tag_name):
     ed = get_entry_by_source('test', entry_name, system=True)
-    assert not tag_name in ed.tags
+    assert_that(tag_name, not_(is_in(ed.tags)))
 
 @then('a search for the tag "{tag_name}" should give {hits} hit')
 @then('a search for the tag "{tag_name}" should give {hits} hits')
 def step_impl(context, tag_name, hits):
     q = EntryQuery(include_tags=[tag_name])
     result = get_entries(q, system=True)
-    logging.info("Gave %i results", result.total_count)
-    assert result.total_count == int(hits)
+    assert_that(result.total_count, equal_to(int(hits)))

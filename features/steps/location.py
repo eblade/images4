@@ -1,5 +1,6 @@
 import logging
 from behave import *
+from hamcrest import *
 
 from images import Location, Entry
 from images.location import LocationDescriptor, create_location, get_locations_by_type
@@ -25,20 +26,24 @@ def step_impl(context):
 def step_impl(context, type, name):
     lds = get_locations_by_type(getattr(Location.Type, type))
     by_name = {ld.name: ld for ld in lds.entries}
-    assert name in by_name.keys()
+    assert_that(name, 
+          is_in(by_name.keys()))
     context.that_location = by_name[name]
 
 @then(u'that location should be mounted at "{path}"')
 def step_impl(context, path):
-    assert context.that_location.metadata.folder == path
+    assert_that(context.that_location.metadata.folder,
+       equal_to(path))
 
 @then(u'that location should have {access} access')
 def step_impl(context, access):
-    assert context.that_location.metadata.access == getattr(Entry.Access, access)
+    assert_that(context.that_location.metadata.access,
+       equal_to(getattr(Entry.Access, access)))
 
 @then(u'that location should belong to user {user_id}')
 def step_impl(context, user_id):
-    assert context.that_location.metadata.user_id == int(user_id)
+    assert_that(context.that_location.metadata.user_id,
+       equal_to(int(user_id)))
 
 @then(u'that location should keep originals')
 def step_impl(context):
