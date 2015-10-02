@@ -352,9 +352,13 @@ def get_entries(query=None, system=False):
                 total_count_paged = total_count
                 offset = query.prev_offset
 
-        logging.info(q)
-        page_size = query.page_size
-        entries = q.limit(page_size).all()
+            logging.info(q)
+            page_size = query.page_size
+            entries = q.limit(page_size).all()
+
+        else:
+            entries = q.all()
+
         count = len(entries)
 
         result = EntryDescriptorFeed(
@@ -364,14 +368,15 @@ def get_entries(query=None, system=False):
             entries = [EntryDescriptor.map_in(entry) for entry in entries])
         
         # Paging
-        if total_count > count:
-            query.next_ts = result.entries[-1].taken_ts
-            result.next_link = BASE + '?' + query.to_query_string()
+        if query is not None:
+            if total_count > count:
+                query.next_ts = result.entries[-1].taken_ts
+                result.next_link = BASE + '?' + query.to_query_string()
 
-        if count > 0 and offset > 0:
-            query.next_ts = ''
-            query.prev_offset = max(offset - page_size, 0)
-            result.prev_link = BASE + '?' + query.to_query_string()
+            if count > 0 and offset > 0:
+                query.next_ts = ''
+                query.prev_offset = max(offset - page_size, 0)
+                result.prev_link = BASE + '?' + query.to_query_string()
 
         return result
 

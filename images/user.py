@@ -74,7 +74,7 @@ def require_admin(realm="private"):
 
         @functools.wraps(func)
         def wrapper(*a, **ka):
-            if current_is_admin:
+            if not current_is_admin():
                 err = HTTPError(401, "Admin permission required")
                 err.add_header('WWW-Authenticate', 'Basic realm="%s"' % realm)
                 return err
