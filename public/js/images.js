@@ -299,7 +299,7 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
         event.preventDefault(); $scope.update_access($scope.current.entry, 0); }; });
     $hotkey.bind('U', function(event) { if ($scope.hk) {
         event.preventDefault(); $scope.update_access($scope.current.entry, 1); }; });
-    $hotkey.bind('E', function(event) { if ($scope.hk) {
+    $hotkey.bind('C', function(event) { if ($scope.hk) {
         event.preventDefault(); $scope.update_access($scope.current.entry, 2); }; });
     $hotkey.bind('A', function(event) { if ($scope.hk) {
         event.preventDefault(); $scope.update_access($scope.current.entry, 3); }; });
