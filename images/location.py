@@ -2,7 +2,7 @@
 import logging, datetime, os
 
 from . import api, Location, SCANNABLE, IMPORTABLE
-from bottle import Bottle, auth_basic, static_file
+from bottle import Bottle, auth_basic, static_file, request
 from .types import PropertySet, Property
 from .user import authenticate, require_admin
 from .database import get_db
@@ -24,6 +24,37 @@ api.register(BASE, app)
 def rest_get_locations():
     json = get_locations().to_json()
     logging.debug("Import Job feed\n%s", json)
+    return json
+
+
+@app.post('/')
+@auth_basic(authenticate)
+@require_admin()
+def rest_create_location(id):
+    ld = LocationDescriptor(request.json)
+    logging.debug("Incoming Location\n%s", ld.to_json())
+    json = create_location(ld).to_json()
+    logging.debug("Outgoing Location\n%s", json)
+    return json
+
+
+@app.get('/<id>')
+@auth_basic(authenticate)
+@require_admin()
+def rest_get_location_by_id(id):
+    json = get_location_by_id(id).to_json()
+    logging.debug("Outgoing Location\n%s", json)
+    return json
+
+
+@app.put('/<id>')
+@auth_basic(authenticate)
+@require_admin()
+def rest_update_location_by_id(id):
+    ld = LocationDescriptor(request.json)
+    logging.debug("Incoming Location\n%s", ld.to_json())
+    json = update_location_by_id(id, ld).to_json()
+    logging.debug("Outgoing Location\n%s", json)
     return json
 
 
@@ -154,6 +185,16 @@ def create_location(ld):
         id = location.id
 
     return get_location_by_id(id)
+
+
+def update_location_by_id(id, ld):
+    with get_db().transaction() as t:
+        q = t.query(Location).filter(Location.id==id)
+        location = q.one()
+        ld.map_out(location)
+
+    return get_location_by_id(id)
+
 
 def delete_location_by_id(id):
     with get_db().transaction() as t:
