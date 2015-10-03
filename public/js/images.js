@@ -11,6 +11,10 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
     $scope.tag_feed = new Object();
     $scope.feed = new Array();
     $scope.q = new Object(); // Query object
+    $scope.mapping = new Object(); // keeping mappings for key/value data
+    $scope.current = Object();
+    $scope.current.entry = null;
+    $scope.current.index = -1;
     
     $scope.reset_query = function () {
         $scope.q.start_ts = '';
@@ -41,20 +45,16 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
     $scope.debug_mode = function() { return $scope.mode == 'debug'; };
     $scope.upload_mode = function() { return $scope.mode == 'upload'; };
 
+    $hotkey.bind('Escape', function(event) { if ($scope.hk) {
+        event.preventDefault(); $scope.set_mode(null); }; });
     $hotkey.bind('N', function(event) { if ($scope.hk) {
         event.preventDefault(); $scope.set_mode(null); }; });
     $hotkey.bind('Q', function(event) { if ($scope.hk) {
         event.preventDefault(); $scope.set_mode('query'); }; });
     $hotkey.bind('T', function(event) { if ($scope.hk) {
         event.preventDefault(); $scope.set_mode('tags'); }; });
-    $hotkey.bind('M', function(event) { if ($scope.hk) {
-        event.preventDefault(); $scope.set_mode('metadata'); }; });
-    $hotkey.bind('P', function(event) { if ($scope.hk) {
-        event.preventDefault(); $scope.set_mode('physical'); }; });
     $hotkey.bind('D', function(event) { if ($scope.hk) {
         event.preventdefault(); $scope.set_mode('debug'); }; });
-    $hotkey.bind('U', function(event) { if ($scope.hk) {
-        event.preventdefault(); $scope.set_mode('upload'); }; });
 
     $scope.enable_hk = function() {
         $scope.hk = true;
@@ -82,7 +82,7 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
 
     // Entry API
     $scope.update_entry = function(entry) {
-        var current_before = $scope.current;
+        var current_before = $scope.current.index;
         $http.put(entry.self_url, entry)
             .success(function(data) {
                 $scope.message = "Entry updated";
@@ -92,29 +92,16 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
 
     $scope.reload = function() {
         $http.get('entry', {
-            params: {
-                start_ts: $scope.q.start_ts,
-                end_ts: $scope.q.end_ts,
-                image: $scope.q.image,
-                video: $scope.q.video,
-                audio: $scope.q.audio,
-                other: $scope.q.other,
-                show_hidden: $scope.q.show_hidden,
-                only_hidden: $scope.q.only_hidden,
-                show_deleted: $scope.q.show_deleted,
-                only_deleted: $scope.q.only_deleted,
-                include_tags: $scope.q.include_tags.join(),
-                exclude_tags: $scope.q.exclude_tags.join(),
-                source: $scope.q.source,
-            }
+            params: $scope.q
         })
             .success(function(data) {
                 $scope.feed = data;
                 if ($scope.feed.count > 0) {
-                    $scope.current = 0;
+                    $scope.current.index = 0;
                 } else {
-                    $scope.current = -1;
+                    $scope.current.index = -1;
                 }
+                $scope.current.entry = $scope.get_current();
             });
     };
 
@@ -123,10 +110,11 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
             .success(function(data) {
                 $scope.feed = data;
                 if (current === 'last') {
-                    $scope.current = $scope.feed.count - 1;
+                    $scope.current.index = $scope.feed.count - 1;
                 } else {
-                    $scope.current = 0;
+                    $scope.current.index = 0;
                 }
+                $scope.current.entry = $scope.get_current();
             });
     };
 
@@ -157,42 +145,47 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
 
     // Viewing an entry
     $scope.view = function(index) {
-        $scope.current = index;
+        $scope.current.index = index;
+        $scope.current.entry = $scope.get_current();
     };
 
     // Navigation
     $scope.previous = function() {
-        if ($scope.current === 0) {
+        if ($scope.current.index === 0) {
             if ($scope.feed.prev_link) {
                 $scope.reload_page($scope.feed.prev_link, 'last');
             }
         } else {
-            $scope.current = Math.max(0, $scope.current - 1);
+            $scope.current.index = Math.max(0, $scope.current.index - 1);
+            $scope.current.entry = $scope.get_current();
         }
     };
     $hotkey.bind('Left', function(event) { if ($scope.hk) {
         event.preventDefault(); $scope.previous(); }; });
 
     $scope.next = function() {
-        if ($scope.current === $scope.feed.count - 1) {
+        if ($scope.current.index === $scope.feed.count - 1) {
             if ($scope.feed.next_link) {
                 $scope.reload_page($scope.feed.next_link, 'first');
             }
         } else {
-            $scope.current = Math.min($scope.feed.count - 1, $scope.current + 1);
+            $scope.current.index = Math.min($scope.feed.count - 1, $scope.current.index + 1);
+            $scope.current.entry = $scope.get_current();
         }
     };
     $hotkey.bind('Right', function(event) { if ($scope.hk) {
         event.preventDefault(); $scope.next(); }; });
 
     $scope.home = function() {
-        $scope.current = 0;
+        $scope.current.index = 0;
+        $scope.current.entry = $scope.get_current();
     };
     $hotkey.bind('Ctrl+Left', function(event) { if ($scope.hk) {
         event.preventDefault(); $scope.home(); }; });
 
     $scope.end = function() {
-        $scope.current = $scope.feed.count - 1;
+        $scope.current.index = $scope.feed.count - 1;
+        $scope.current.entry = $scope.get_current();
     };
     $hotkey.bind('Ctrl+Right', function(event) { if ($scope.hk) {
         event.preventDefault(); $scope.end(); }; });
@@ -202,17 +195,15 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
 
     // Toggling Delete
     $scope.toggle_deleted = function() {
-        var entry = $scope.feed.entries[$scope.current];
-        entry.deleted = ! entry.deleted;
-        $scope.update_entry(entry);
+        $scope.current.entry.deleted = ! $scope.current.entry.deleted;
+        $scope.update_entry($scope.current.entry);
     };
     $hotkey.bind('Delete', function(event) { if ($scope.hk) {
         event.preventDefault(); $scope.toggle_deleted(); }; });
 
     // Toggling Hidden
     $scope.toggle_hidden = function() {
-        var entry = $scope.feed.entries[$scope.current];
-        entry.hidden = ! entry.hidden;
+        $scope.current.entry.hidden = ! $scope.current.entry.hidden;
         $scope.update_entry(entry);
     };
     $hotkey.bind('X', function(event) { if ($scope.hk) {
@@ -220,33 +211,31 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
 
     // Info About Current
     $scope.have_current = function() {
-        if ($scope.current < 0) {
-            return false;
-        } else {
-            return true;
-        }
+        return $scope.current.entry !== null;
     };
 
     $scope.get_current = function() {
         var entry;
-        if ($scope.current < 0) { return null; }
+        if ($scope.current.index < 0) { return null; }
         if ($scope.feed == null) { return null; }
-        return $scope.feed.entries[$scope.current];
+        entry = $scope.feed.entries[$scope.current.index];
+        // entry.access = entry.access;
+        return entry;
     };
 
     $scope.get_current_proxy_url = function() {
-        if ($scope.current < 0) {
+        if ($scope.current.entry === null) {
             return ''
         } else {
-            return $scope.feed.entries[$scope.current].proxy_url;
+            return $scope.current.entry.proxy_url;
         }
     };
 
     $scope.get_current_filename = function() {
-        if ($scope.current < 0) {
+        if ($scope.current.entry === null) {
             return ''
         } else {
-            return $scope.feed.entries[$scope.current].original_filename;
+            return $scope.current.entry.original_filename;
         }
     };
 
@@ -258,7 +247,7 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
         else if (entry.hidden == true) {
             filters += " hidden";
         }
-        if (index == $scope.current) {
+        if (index == $scope.current.index) {
             filters += " selected";
         }
         return filters;
@@ -288,19 +277,32 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
         }
     };
 
+    $scope.mapping.access = {
+        0: 'Private',
+        1: 'Users can see',
+        2: 'users Can edit',
+        3: 'public for All',
+    };
     $scope.get_access_long = function(entry) {
         if (!entry) {
             return '';
-        } else if (entry.access == 0) {
-            return 'Only I can see';
-        } else if (entry.access == 1) {
-            return 'All users can see';
-        } else if (entry.access == 2) {
-            return 'All users can see and edit';
-        } else if (entry.access == 3) {
-            return 'Everyone can see';
+        } else {
+            return $scope.mapping.access[entry.access];
         }
     };
+    $scope.update_access = function(entry, key){
+        entry.access = parseInt(key);
+        $scope.update_entry(entry);
+    };
+
+    $hotkey.bind('P', function(event) { if ($scope.hk) {
+        event.preventDefault(); $scope.update_access($scope.current.entry, 0); }; });
+    $hotkey.bind('U', function(event) { if ($scope.hk) {
+        event.preventDefault(); $scope.update_access($scope.current.entry, 1); }; });
+    $hotkey.bind('E', function(event) { if ($scope.hk) {
+        event.preventDefault(); $scope.update_access($scope.current.entry, 2); }; });
+    $hotkey.bind('A', function(event) { if ($scope.hk) {
+        event.preventDefault(); $scope.update_access($scope.current.entry, 3); }; });
 
     $scope.get_purpose = function(number) {
         if (number == 0) {
@@ -338,7 +340,7 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
     };
 
     $scope.toggle_tag = function(tag_id) {
-        var entry = $scope.feed.entries[$scope.current];
+        var entry = $scope.feed.entries[$scope.current.index];
         if (entry == null) {
             return;
         }
@@ -361,6 +363,10 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
         }
         return tag.foreground_color;
     };
+
+    $scope.is_selected = function(a, b) {
+        return a == b ? 'selected' : '';
+    }
 
     resize_proxy = function() {
         $scope.window_height = window.innerHeight + 'px';

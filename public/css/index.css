@@ -208,3 +208,13 @@ div.max200 {
 .number {
     text-align: right;
 }
+
+a.choice {
+    margin-left: 3px;
+    margin-right: 3px;
+}
+
+a.selected {
+    background-color: white;
+    color: black;
+}
