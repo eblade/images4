@@ -2,8 +2,8 @@ Feature: Locations
   
   Background:
      Given a system specified by "default.ini"
-     Given a specific set of locations
-        | name      | type        | path                    | keep original   | user id   | access  |
+       And a specific set of locations
+        | name      | type        | folder                  | keep_original   | user_id   | access  |
         | test_drop | drop_folder | /tmp/images/drop_folder | no              | 1         | private |
         | test_mob  | mobile      | /tmp/images/mobile      | yes             | 2         | users   |
         | test_leg  | legacy      | /tmp/images/legacy      | yes             | 2         | public  |

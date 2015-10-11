@@ -12,6 +12,15 @@ def step_impl(context, user):
 def step_impl(context, password):
     context.password = password
 
+@given('a user id {user_id:d}')
+def step_impl(context, user_id):
+    contenxt.user_id = user_id
+
+@given('the user logged in as {username}:{password}')
+@then('the user logged in as {username}:{password}')
+def step_impl(context, username, password):
+    context.logged_in = authenticate(username, password)
+
 @when('the user tries to log in')
 def step_impl(context):
     context.logged_in = authenticate(context.user, context.password)

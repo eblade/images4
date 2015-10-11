@@ -253,30 +253,39 @@ class EntryQuery(PropertySet):
         eq.only_hidden = request.query.only_hidden == 'yes'
         eq.only_deleted = request.query.only_deleted == 'yes'
 
-        eq.include_tags = [t.strip() for t in (request.query.include_tags or '').split(',') if t.strip()]
-        eq.exclude_tags = [t.strip() for t in (request.query.exclude_tags or '').split(',') if t.strip()]
+        decoded = request.query.decode()
+        eq.include_tags = decoded.getall('include_tags')
+        eq.exclude_tags = decoded.getall('exclude_tags')
         return eq
     
     def to_query_string(self):
-        return urllib.parse.urlencode((
-            ('start_ts', self.start_ts),
-            ('end_ts', self.end_ts),
-            ('next_ts', self.next_ts),
-            ('prev_offset', self.prev_offset or ''),
-            ('page_size', self.page_size),
-            ('order', self.order),
-            ('image', 'yes' if self.image else 'no'),
-            ('video', 'yes' if self.video else 'no'),
-            ('audio', 'yes' if self.audio else 'no'),
-            ('other', 'yes' if self.other else 'no'),
-            ('source', self.source),
-            ('show_hidden', 'yes' if self.show_hidden else 'no'),
-            ('show_deleted', 'yes' if self.show_deleted else 'no'),
-            ('only_hidden', 'yes' if self.only_hidden else 'no'),
-            ('only_deleted', 'yes' if self.only_deleted else 'no'),
-            ('include_tag', ','.join(self.include_tags)),
-            ('exclude_tag', ','.join(self.exclude_tags)),
-        ))
+        return urllib.parse.urlencode(
+            (
+                ('start_ts', self.start_ts),
+                ('end_ts', self.end_ts),
+                ('next_ts', self.next_ts),
+                ('prev_offset', self.prev_offset or ''),
+                ('page_size', self.page_size),
+                ('order', self.order),
+                ('image', 'yes' if self.image else 'no'),
+                ('video', 'yes' if self.video else 'no'),
+                ('audio', 'yes' if self.audio else 'no'),
+                ('other', 'yes' if self.other else 'no'),
+                ('source', self.source),
+                ('show_hidden', 'yes' if self.show_hidden else 'no'),
+                ('show_deleted', 'yes' if self.show_deleted else 'no'),
+                ('only_hidden', 'yes' if self.only_hidden else 'no'),
+                ('only_deleted', 'yes' if self.only_deleted else 'no'),
+            )
+                +
+            tuple([
+                ('include_tags', tag) for tag in self.include_tags
+            ])
+                +
+            tuple([
+                ('exclude_tags', tag) for tag in self.exclude_tags
+            ])
+        )
 
 ################################################################################
 # Entry Internal BASE

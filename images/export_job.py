@@ -3,7 +3,8 @@
 import logging, os, errno
 from threading import Thread, Event
 from datetime import datetime, timedelta
-from bottle import Bottle, auth_basic
+from bottle import Bottle, auth_basic, request
+#from sqlalchemy.orm.exc import NoResultFound
 
 from . import api, ExportJob, Location, Entry, User, EXPORTABLE
 from .database import get_db
@@ -12,6 +13,7 @@ from .user import authenticate, no_guests, current_user_id
 from .types import PropertySet, Property
 from .location import LocationDescriptor, get_locations_by_type, get_location_by_type
 from .entry import EntryDescriptor, create_entry
+from .metadata import wrap_raw_json
 
 
 ################################################################################
@@ -69,6 +71,15 @@ def rest_get_export_job_by_id(export_job_id):
     return json
 
 
+@app.get('/entry/<entry_id:int>')
+@auth_basic(authenticate)
+@no_guests()
+def rest_get_export_jobs_by_entry_id(entry_id):
+    json = get_export_jobs_by_entry_id(entry_id).to_json()
+    logging.debug("Export Jobs\n%s", json)
+    return json
+
+
 @app.delete('/job/<export_job_id:int>')
 @auth_basic(authenticate)
 @no_guests()
@@ -82,7 +93,7 @@ def rest_delete_export_job_by_id(export_job_id):
 @no_guests()
 def rest_reset_export_job(export_job_id):
     json = reset_export_job(export_job_id).to_json()
-    logging.info("Reset Export Job\n%s", json)
+    logging.debug("Reset Export Job\n%s", json)
     return json
 
 
@@ -175,9 +186,9 @@ class ExportJobDescriptor(PropertySet):
         jd = ExportJobDescriptor(
             id = export_job.id,
             metadata = wrap_raw_json(export_job.data),
-            user = User.map_in(export_job.user),
+            user_id = export_job.user_id,
             location = LocationDescriptor.map_in(export_job.location),
-            entry = Entry.map_in(export_job.entry),
+            entry = EntryDescriptor.map_in(export_job.entry) if export_job.entry else None,
             state = ExportJob.State(export_job.state),
             create_ts = (export_job.create_ts.strftime('%Y-%m-%d %H:%M:%S')
                        if export_job.create_ts is not None else None),
@@ -192,7 +203,7 @@ class ExportJobDescriptor(PropertySet):
     def map_out(self, export_job):
         if self.id is not None: export_job.id = self.id
         export_job.data = self.metadata.to_json() if self.metadata is not None else None
-        export_job.user_id = self.user.id if self.user is not None else None
+        export_job.user_id = self.user_id
         export_job.location_id = self.location.id if self.location is not None else None
         export_job.state = self.state
         export_job.entry_id = self.entry.id if self.entry is not None else None
@@ -228,28 +239,44 @@ def get_export_jobs():
         )
 
 
-def create_export_job(jd): # ExportJobDescriptor
+def get_export_jobs_by_entry_id(entry_id): 
     with get_db().transaction() as t:
-        try:
-            export_job = t.query(ExportJob).filter(
-                ExportJob.location_id == jd.location.id,
-                ExportJob.path == jd.path,
-            ).one()
+        export_jobs = (t.query(ExportJob)
+            .filter(ExportJob.entry_id == entry_id)
+            .order_by(ExportJob.update_ts.desc())
+            .all()
+        )
+        feed = ExportJobDescriptorFeed(
+            count=len(export_jobs),
+            entries=[ExportJobDescriptor.map_in(export_job) for export_job in export_jobs]
+        )
+        logging.debug("Export Jobs for entry %i:\n%s", entry_id, feed.to_json())
+        return feed
 
-            return ExportJobDescriptor.map_in(export_job)
-        except NoResultFound:
-            logging.info("Creating Export Job for %i://%s",
-                         jd.location.id,
-                         jd.path
-            )
-            export_job = ExportJob()
-            jd.map_out(export_job)
-            t.add(export_job)
-            t.commit()
-            id = export_job.id
+
+def create_export_job(jd, system=False): # ExportJobDescriptor
+    with get_db().transaction() as t:
+        if not system:
+            jd.user_id = request.user.id
+        else:
+            assert jd.user_id, "System calls must give user id"
+        assert jd.entry is not None, "Missing entry"
+        assert jd.entry.id is not None, "Missing entry.id"
+        assert jd.location is not None, "Missing location"
+        assert jd.location.id is not None, "Missing location.id"
+
+        logging.info("Creating Export Job for %i://%s",
+                     jd.location.id,
+                     jd.metadata.path if jd.metadata is not None else '?',
+        )
+
+        export_job = ExportJob()
+        jd.map_out(export_job)
+        t.add(export_job)
+        t.commit()
+        id = export_job.id
     
-    jd = get_export_job_by_id(id)
-    return jd
+    return get_export_job_by_id(id)
 
 
 def pick_up_export_job(location_id):
@@ -299,18 +326,18 @@ def reset_export_job(export_job_id):
         export_job.data = metadata.to_json()
 
     jd = get_export_job_by_id(export_job_id)
-    rest_trig_export(jd.location.id)
+    rest_trig(jd.location.id)
     return jd
 
 
 def delete_old_export_jobs():
-    logging.info("Deleting old Export Jobs.")
+    logging.debug("Deleting old Export Jobs.")
     with get_db().transaction() as t:
         n = t.query(ExportJob).filter(
             ExportJob.state == ExportJob.State.done,
             ExportJob.update_ts < (datetime.utcnow()-timedelta(hours=1))
         ).delete(synchronize_session=False)
-        logging.info("Deleted %i old Export Jobs.", n)
+        logging.debug("Deleted %i old Export Jobs.", n)
         return n
 
 
@@ -389,12 +416,12 @@ def exporting_loop(export_event, location):
 
             logging.debug("ExportJobDescriptor:\n%s", jd.to_json())
 
-            jd.analyse()
+            #jd.analyse()
             export_module = get_export_module(jd)
 
             if export_module is None:
                 fail_export_job(jd, 
-                    "Could not find a suitable export module for MIME Type %s" % jd.mime_type
+                    "Could not find a suitable export module for protocol %s" % jd.get_protocol()
                 )
                 continue
 
@@ -406,35 +433,9 @@ def exporting_loop(export_event, location):
                 )
                 continue
 
-            ed = export_module.entry
-            ed.user_id = jd.user_id or export_module.user_id
-
-            if not jd.metadata:
-                jd.metadata = ExportJob.DefaultExportJobMetadata()
-
-            if jd.metadata.tags:
-                ed.tags = jd.metadata.tags
-            elif metadata.tags:
-                ed.tags = metadata.tags
-            ed.hidden = jd.metadata.hidden or metadata.hidden
-            ed.delete_ts = jd.metadata.delete_ts
-            ed.access = jd.metadata.access or metadata.access
-            ed.metadata = jd.metadata.metadata
-            ed.source = jd.metadata.source or metadata.source
-
-            logging.debug("EntryDescriptor:\n%s", ed.to_json())
-            
-            ed.state = Entry.State.online
-            ed = create_entry(ed, system=True)
-
-            if metadata.keep_original:
-                jd.state = ExportJob.State.keep
-            else:
-                jd.state = ExportJob.State.done
-
-            jd.entry_id = ed.id
+            jd.state = ExportJob.State.done
             update_export_job_by_id(jd.id, jd)
-            logging.info("Export Job Done %s", jd.path)
+            logging.info("Export Job Done %i", jd.id)
 
 
 def cleaning_loop(clean_event):

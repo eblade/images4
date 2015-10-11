@@ -164,5 +164,5 @@ def delete_loop(event, locations):
 
                 delete_file_on_location(location, f.path)
 
-            delete_entry_by_id(entry.id)
+            delete_entry_by_id(entry.id, system=True)
             logging.info("Deleted entry %i.", entry.id)

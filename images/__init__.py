@@ -137,7 +137,8 @@ class ExportJob(Base):
 
     class DefaultExportJobMetadata(PropertySet):
         path = Property()
-        want = Property(int)  # FileDescriptor.Purpose
+        wants = Property(int)  # FileDescriptor.Purpose
+        longest_side = Property(int)
 
     id = Column(Integer, primary_key=True)
     create_ts = Column(DateTime(timezone=True), default=func.now())
@@ -231,6 +232,7 @@ class RemoteCopy(Base):
 
 register_metadata_schema(Location.DefaultLocationMetadata)
 register_metadata_schema(ImportJob.DefaultImportJobMetadata)
+register_metadata_schema(ExportJob.DefaultExportJobMetadata)
 register_metadata_schema(Entry.DefaultMetadata)
 register_metadata_schema(Entry.DefaultPhysicalMetadata)
 register_metadata_schema(User.DefaultConfig)

@@ -1,7 +1,7 @@
 
 import logging, datetime, os
 
-from . import api, Location, SCANNABLE, IMPORTABLE
+from . import api, Location, SCANNABLE, IMPORTABLE, EXPORTABLE
 from bottle import Bottle, auth_basic, static_file, request
 from .types import PropertySet, Property
 from .user import authenticate, require_admin
@@ -23,7 +23,7 @@ api.register(BASE, app)
 @require_admin()
 def rest_get_locations():
     json = get_locations().to_json()
-    logging.debug("Import Job feed\n%s", json)
+    logging.debug("Location feed\n%s", json)
     return json
 
 
@@ -38,7 +38,15 @@ def rest_create_location(id):
     return json
 
 
-@app.get('/<id>')
+@app.get('/exportable')
+@auth_basic(authenticate)
+def rest_get_export_locations():
+    json = get_locations_by_type(*EXPORTABLE).to_json()
+    logging.info("Export Location feed\n%s", json)
+    return json
+
+
+@app.get('/<id:int>')
 @auth_basic(authenticate)
 @require_admin()
 def rest_get_location_by_id(id):
@@ -47,7 +55,7 @@ def rest_get_location_by_id(id):
     return json
 
 
-@app.put('/<id>')
+@app.put('/<id:int>')
 @auth_basic(authenticate)
 @require_admin()
 def rest_update_location_by_id(id):
@@ -147,6 +155,12 @@ def get_location_by_id(id):
         return LocationDescriptor.map_in(location)
 
 
+def get_location_by_name(name):
+    with get_db().transaction() as t:
+        location = t.query(Location).filter(Location.name==name).one()
+        return LocationDescriptor.map_in(location)
+
+
 def get_locations_by_type(*types):
     with get_db().transaction() as t:
         locations = t.query(Location).filter(Location.type.in_(types)).all()
@@ -172,7 +186,10 @@ def get_locations():
 
 
 def delete_file_on_location(location, path):
-    os.remove(os.path.join(location.metadata.folder, path))
+    try:
+        os.remove(os.path.join(location.metadata.folder, path))
+    except FileNotFoundError:
+        logging.warning('File "%i:%s" cannot be deleted, since it\'s already gone', location.id, path)
 
 
 def create_location(ld):

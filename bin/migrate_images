@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+
+import os, json, requests
+
+
+ROOT = '/home/johan/Pictures/sessions'
+
+MAX = 10000
+
+cat2tag = {
+    'A': 'bra',
+    'B': 'bra',
+    'C': 'bra',
+    'R': 'rolig',
+    'I': 'jiajia',
+    'O': 'johan',
+}
+
+
+session = requests.Session()
+session.auth = ('johan', 'johan')
+
+
+entries = {}
+with open(os.path.join(ROOT, '.directory.json')) as f:
+    entries = json.load(f)
+
+collections = {}
+for collection_file in os.listdir(ROOT):
+    if collection_file.endswith('.collection'):
+        with open(os.path.join(ROOT, collection_file)) as f:
+            collection = json.load(f)
+            collections[collection.get('name', 'untitled')] = collection.get('entries', [])
+
+for n, entry in enumerate(entries.values()):
+    if n >= MAX:
+        break
+
+    filename = entry.get('filename')
+    categories = entry.get('categories')
+    type = entry.get('type')
+
+    print("Entry: %s [%s] %s" % (type, categories, filename))
+
+    if type != 'image':
+        continue
+
+    hidden = ('X' in categories)
+    if hidden:
+        print("Hidden")
+       
+    tags = []
+    for cat, tag in cat2tag.items():
+        if cat in categories:
+            tags.append(tag)
+    
+    for collection_name, collection in collections.items():
+        if filename in collection:
+            tags.append('album.%s' % collection_name.lower())
+
+    print(tags)
+
+    import_job = {
+        "path": filename,
+        "user_id": 1,
+        "metadata": {
+            "*schema": "DefaultImportJobMetadata",
+            "tags": tags,
+            "hidden": hidden,
+            "access": 2,  # Common
+        },
+        "location": {
+            "id": 10,
+        }
+    }
+
+    print(json.dumps(import_job, indent=2))
+
+    session.request('POST', 'http://localhost:8080/import/job', json=import_job)

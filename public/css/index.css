@@ -57,7 +57,7 @@ a {
 .hidden {
   filter: blur(4px);
 }
-.selected {
+div.selected {
   border: 3px solid white;
   width: 194px;
   height: 194px;
@@ -210,8 +210,11 @@ div.max200 {
 }
 
 a.choice {
+    padding: 2px;
     margin-left: 3px;
     margin-right: 3px;
+    background-color: darkgrey;
+    color: black;
 }
 
 a.selected {

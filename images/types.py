@@ -208,3 +208,11 @@ def strip(dct, prefix):
     else:
         length = len(prefix) + 1
         return {k[length:]: dct[k] for k in dct.keys() if k.startswith(prefix + '.')}
+
+def first(*objects):
+    """
+    Return the first non-None object in objects.
+    """
+    for obj in objects:
+        if obj is not None:
+            return obj

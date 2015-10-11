@@ -79,13 +79,14 @@ class FileCopy(object):
                     self.destination_full_path = fixed_dst
                 break
             except FileExistsError:
+                logging.warning("File exists %s", fixed_dst)
                 c += 1
             except OSError as e:
                 if e.errno == errno.EXDEV:
-                    logging.debug("Cross-device link %s -> %s", src, fixed_dst)
+                    logging.warning("Cross-device link %s -> %s", src, fixed_dst)
                     self.link = False
                 else:
-                    logging.debug("OSError %i %s -> %s (%s)", e.errno, src, fixed_dst, str(e))
+                    logging.warning("OSError %i %s -> %s (%s)", e.errno, src, fixed_dst, str(e))
                     raise e
                     
 

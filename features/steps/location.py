@@ -9,17 +9,14 @@ from images.location import LocationDescriptor, create_location, get_locations_b
 @given('a specific set of locations')
 def step_impl(context):
     for row in context.table:
-        md = Location.DefaultLocationMetadata(
-            folder = row['path'],
-            user_id = int(row['user id']),
-            keep_original = (row['keep original'] == 'yes'),
-            access = getattr(Entry.Access, row['access']),
-        )
+        data = {key: row[key] for key in context.table.headings}
         ld = LocationDescriptor(
-            name = row['name'],
-            type = getattr(Location.Type, row['type']),
-            metadata = md,
+            name = data.pop('name'),
+            type = getattr(Location.Type, data.pop('type')),
         )
+        if 'access' in data: data['access'] = getattr(Entry.Access, row['access'])
+        md = Location.DefaultLocationMetadata(**data)
+        ld.metadata = md
         create_location(ld)
 
 @then(u'there should be a "{type}" location named "{name}"')

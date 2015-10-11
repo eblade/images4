@@ -44,6 +44,7 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
     $scope.physical_mode = function() { return $scope.mode == 'physical'; };
     $scope.debug_mode = function() { return $scope.mode == 'debug'; };
     $scope.upload_mode = function() { return $scope.mode == 'upload'; };
+    $scope.export_mode = function() { return $scope.mode == 'export'; };
 
     $hotkey.bind('Escape', function(event) { if ($scope.hk) {
         event.preventDefault(); $scope.set_mode(null); }; });
@@ -375,8 +376,93 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
     };
     window.onresize = resize_proxy;
     resize_proxy();
+
+    $scope.empty_post = function(url) {
+        $http.post(url)
+            .success(function(data) {
+                $scope.message = data.result;
+            });
+        };
+
+    $scope.delete = function(url) {
+        $http.delete(url)
+            .success(function(data) {
+                $scope.message = data.result;
+            });
+        };
 })
 
+.controller('Export', function ($scope, $http) {
+    $scope.mapping.source = [
+        { key: "auto", value: "auto" },
+        { key: 0, value: "original" },
+        { key: 1, value: "proxy"} ,
+    ];
+
+    $scope.mapping.source_r = {
+        null: 'auto',
+        0: 'original',
+        1: 'proxy',
+    };
+
+    $scope.mapping.longest = [
+        { key: "keep", value: 'keep' },
+        { key: "320", value: "320px" },
+        { key: "480", value: "480px" },
+        { key: "640", value: "640px" },
+        { key: "800", value: "800px" },
+        { key: "1024", value: "1024px" },
+        { key: "1280", value: "1280px" },
+        { key: "1600", value: "1600px" },
+    ];
+
+    $scope.mapping.export_state = {
+        0: "new",
+        1: "active",
+        2: "done",
+        3: "failed",
+    };
+
+    $scope.export_settings = Object();
+    $scope.export_settings.filename = "";
+    $scope.export_settings.source = 'auto';
+    $scope.export_settings.longest = 'keep';
+
+    $scope.export_locations = Object();
+
+    // Load resources
+    $http.get('location/exportable')
+        .success(function(data) {
+            $scope.export_locations = data;
+            $scope.export_settings.location_id = data.entries[0].id;
+        });
+
+    // Create Export Job
+    $scope.create_export_job = function(entry) {
+        var job = new Object();
+        job['location'] = { id: $scope.export_settings.location_id };
+        job.entry = { id: entry.id };
+        job.metadata = { 
+            '*schema': 'DefaultExportJobMetadata',
+            path: $scope.export_settings.filename,
+            wants: ($scope.export_settings.source == 'auto' ? null : $scope.export_settings.source),
+            longest_side: ($scope.export_settings.longest == 'keep' ? null : $scope.export_settings.longest),
+        };
+        $http.post('export/job', job)
+            .success(function(data) {
+                $scope.message = 'Created export job ' + data.id;
+                $scope.update_export_job_list();
+            });
+    };
+
+    $scope.update_export_job_list = function() {
+        $http.get('export/entry/' + $scope.current.entry.id)
+            .success(function(data) {
+                $scope.export_jobs = data;
+            });
+    };
+    $scope.update_export_job_list();
+})
 
 .controller('Manage', function ($scope, $http) {
     // Modes

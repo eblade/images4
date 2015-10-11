@@ -25,6 +25,7 @@ logging.info("Loading modules...")
 from images.database import init
 from images import api, scanner, location, entry, tag, user, import_job, delete, export_job
 from images.ingest import image
+from images.outgest import local
 from images.user import authenticate, no_guests
 logging.info("Loading modules done.")
 
@@ -42,7 +43,7 @@ db = init(sql_path)
 # Setting up thread managers
 scanner_manager = scanner.ScannerManager()
 import_manager = import_job.ImportManager()
-#export_manager = export_job.ExportManager()
+export_manager = export_job.ExportManager()
 delete_manager = delete.DeleteManager()
 
 

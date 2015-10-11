@@ -27,6 +27,8 @@
                         <button ng-click="set_mode('metadata')" />Metadata</button>
                         <button ng-click="set_mode('physical')" />Physical</button>
                         <button ng-click="set_mode('upload')" />Upload</button>
+                        <button ng-click="set_mode('export')" />Export</button>
+                        <button ng-click="set_mode('debug')" />Debug</button>
                         {{me.id}} / {{me.name}} :: {{feed.offset + current.index + 1}} of {{feed.total_count}} :: {{message}}
                     </div>
                 </td>
@@ -184,7 +186,8 @@
                                     <td>Source</td><td>{{current.entry.source}}</td>
                                 </tr>
                                 <tr>
-                                    <td>Original Filename</td><td>{{current.entry.original_filename}}</td>
+                                    <td>Original Filename</td>
+                                    <td><a href="{{current.entry.primary_url}}" target="new">{{current.entry.original_filename}}</a></td>
                                 </tr>
                                 <tr>
                                     <td>Export Filename</td><td>{{current.entry.export_filname}}</td>
@@ -231,6 +234,66 @@
                             <br /><br />
                             <img ng-src="{{uploaded_image}}" width="100%" />
                             <button ng-click="show_from_source('web')">Show web uploads</button>
+                        </div>
+                        <div class="toolbox metadata" ng-if="export_mode()" ng-show="export_mode()" ng-controller="Export">
+                            <h3>Export</h3>
+                            Export to <a 
+                                     class="choice {{is_selected(loc.id, export_settings.location_id)}}" href="#" 
+                                     ng-repeat="loc in export_locations.entries" 
+                                     ng-click="export_settings.location_id = loc.id">{{loc.name}}</a>
+                            <br /><br />
+                            Filename on destination 
+                                <input type="text" value=""
+                                    ng-model="export_settings.filename"
+                                    ng-blur="enable_hk()"
+                                    ng-focus="disable_hk()"/>
+                            <br /><br />
+                            Take <a 
+                                     class="choice {{is_selected(source.key, export_settings.source)}}" href="#" 
+                                     ng-repeat="source in mapping.source" 
+                                     ng-click="export_settings.source = source.key">{{source.value}}</a>
+                            <br /><br />
+                            Resize longest side to <a 
+                                     class="choice {{is_selected(longest.key, export_settings.longest)}}" href="#" 
+                                     ng-repeat="longest in mapping.longest" 
+                                     ng-click="export_settings.longest = longest.key">{{longest.value}}</a>
+                            <br /><br />
+                            <button ng-click="create_export_job(current.entry, export.filename, export.source, export.longest)">Export</button>
+                            <br /><br />
+                            <h3>Export Jobs for this Entry</h3>
+                            <button ng-click="update_export_job_list()">Refresh</button>
+                            <table ng-if="export_jobs.entries">
+                                <tr>
+                                    <th class="number">Id</th>
+                                    <th class="number">Entry Id</th>
+                                    <th>Export to</th>
+                                    <th>Filename</th>
+                                    <th>Source</th>
+                                    <th>Longest</th>
+                                    <th>State</th>
+                                    <th>Reset</th>
+                                    <th>Delete</th>
+                                </tr>
+                                <tr ng-repeat="export_job in export_jobs.entries">
+                                    <td class="number">{{export_job.id}}</td>
+                                    <td class="number">{{export_job.entry.id}}</td>
+                                    <td>{{export_job.location.name}}</td>
+                                    <td>{{export_job.metadata.path}}</td>
+                                    <td>{{mapping.source_r[export_job.metadata.wants]}}</td>
+                                    <td>{{export_job.metadata.longest_side}}</td>
+                                    <td class="{{mapping.export_state[export_job.state]}}">
+                                        {{mapping.export_state[export_job.state]}}
+                                    </td>
+                                    <td><button 
+                                            ng-show="export_job.trig_reset_url"
+                                            ng-click="empty_post(export_job.trig_reset_url)">Reset</button>
+                                    </td>
+                                    <td><button 
+                                            ng-show="export_job.self_url"
+                                            ng-click="delete(export_job.self_url)">Delete</button>
+                                    </td>
+                                </tr>
+                            </table>
                         </div>
                     </div>
                 </td>

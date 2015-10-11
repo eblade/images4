@@ -39,32 +39,6 @@ def authenticate(username, password):
             return False
 
 
-@app.get('/me')
-@auth_basic(authenticate)
-def me():
-    json = request.user.to_json()
-    logging.info("Me\n%s", json)
-    return json
-
-
-class UserDescriptor(PropertySet):
-    id = Property(int)
-    status = Property(enum=User.Status)
-    name = Property()
-    fullname = Property()
-    user_class = Property(enum=User.Class)
-
-
-def current_user_id():
-    """
-    Shorthand for retrieving the currently logged in user, if any.
-    """
-    try:
-        return request.user.id
-    except AttributeError:
-        return None
-
-
 def require_admin(realm="private"):
     """
     Bottle Callback decorator to require the current
@@ -105,6 +79,60 @@ def no_guests():
     return decorator
 
 
+@app.get('/me')
+@auth_basic(authenticate)
+def rest_me():
+    json = request.user.to_json()
+    logging.info("Me\n%s", json)
+    return json
+
+
+@app.get('/<user_id:int>')
+@auth_basic(authenticate)
+@require_admin
+def rest_get_user_by_id(user_id):
+    json = get_user_by_id(user_id).to_json()
+    logging.info("Outgoing User\n%s", json)
+    return json
+
+
+@app.get('/name/<name>')
+@auth_basic(authenticate)
+@require_admin
+def rest_get_user_by_id(name):
+    json = get_user_by_name(name).to_json()
+    logging.info("Outgoing User\n%s", json)
+    return json
+
+
+class UserDescriptor(PropertySet):
+    id = Property(int)
+    status = Property(enum=User.Status)
+    name = Property()
+    fullname = Property()
+    user_class = Property(enum=User.Class)
+
+    @classmethod
+    def map_in(self, user):
+        return UserDescriptor(
+            id = user.id,
+            status = User.Status(user.status),
+            name = user.name,
+            fullname = user.fullname,
+            user_class = User.Class(user.user_class)
+        )
+
+
+def current_user_id():
+    """
+    Shorthand for retrieving the currently logged in user, if any.
+    """
+    try:
+        return request.user.id
+    except AttributeError:
+        return None
+
+
 def current_is_user():
     return request.user.user_class is not User.Class.guest 
 
@@ -123,3 +151,21 @@ def require_user_id(user_id):
     """
     if user_id != request.user.id:
         raise HTTPError(401, "Access denied")
+
+
+def get_user_by_id(user_id):
+    with get_db().transaction() as t:
+        user = (t.query(User)
+                 .filter(User.id == user_id)
+                 .one())
+
+        return UserDescriptor.map_in(user)
+
+
+def get_user_by_name(name):
+    with get_db().transaction() as t:
+        user = (t.query(User)
+                 .filter(User.name == name)
+                 .one())
+
+        return UserDescriptor.map_in(user)
