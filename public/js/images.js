@@ -205,7 +205,7 @@ angular.module('images', ['drahak.hotkeys', 'ngTouch'])
     // Toggling Hidden
     $scope.toggle_hidden = function() {
         $scope.current.entry.hidden = ! $scope.current.entry.hidden;
-        $scope.update_entry(entry);
+        $scope.update_entry($scope.current.entry);
     };
     $hotkey.bind('X', function(event) { if ($scope.hk) {
         event.preventDefault(); $scope.toggle_hidden(); }; });
