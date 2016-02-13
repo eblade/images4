@@ -12,7 +12,7 @@ class UrlFactory(object):
     def __getattr__(self, attr):
         if attr == '_functions':
             return self.__getattribute__(attr)
-        return self._functions.get(attr)
+        return self._functions.get(attr, none)
 
     def __iadd__(self, other):
         if not callable(other):
@@ -62,3 +62,7 @@ def mount_all(root_app):
     for mount_point, app in _apis.items():
         logging.info("Mounting app on '%s'", mount_point)
         root_app.mount(mount_point, app)
+
+
+def none(*args, **kwargs):
+    return None

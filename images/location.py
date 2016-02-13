@@ -118,9 +118,9 @@ class LocationDescriptor(PropertySet):
 
     def calculate_urls(self):
         self.self_url = '%s/%i' % (BASE, self.id)
-        if self.type in SCANNABLE:
+        if self.type in SCANNABLE and api.url().scanner:
             self.trig_scan_url = api.url().scanner.get_trig_url(self.id)
-        if self.type in IMPORTABLE:
+        if self.type in IMPORTABLE and api.url().import_job:
             self.trig_import_url = api.url().import_job.get_trig_url(self.id)
 
     @classmethod

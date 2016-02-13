@@ -3,6 +3,7 @@ import sys, os, logging, configparser
 
 from .database import init, password_hash
 from . import Location, User, Tag
+from .location import get_location_by_name, update_location_by_id
 
 class Setup:
     def __init__(self, config_path, debug=False):
@@ -63,7 +64,10 @@ class Setup:
                 logging.debug("There should be a location '%s'.", name)
 
                 if t.query(Location).filter(Location.name==name).count() > 0:
-                    logging.debug("Location '%s' exists, skipping.", name)
+                    logging.debug("Location '%s' exists, updating.", name)
+                    location = get_location_by_name(name)
+                    location.metadata.folder = path
+                    update_location_by_id(location.id, location)
                     continue
 
                 extra_name = 'Location:%s' % name
