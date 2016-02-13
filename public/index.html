@@ -322,7 +322,7 @@
                                     class="thumbcell"
                                     ng-repeat="entry in feed.entries"
                                     scroll-if="$index == current.index">
-                                    <div class="max200">
+                                    <div class="max200 {{$index == current.index ? 'selected' : ''}}">
                                         <img 
                                             ng-src="{{entry.thumb_url}}"
                                             ng-click="view($index)"
